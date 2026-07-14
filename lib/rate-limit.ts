@@ -36,8 +36,11 @@ export function checkRateLimit(
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
-/** Викликати лише після невдалої спроби — успішні не рахуються. */
-export function recordFailedAttempt(key: string, windowMs: number): void {
+/** Збільшує лічильник для ключа. Коли саме викликати — вирішує сам
+ * ендпоінт: логін рахує лише невдалі спроби (успішний вхід не штрафується),
+ * а запит на скидання пароля рахує кожну валідну спробу (успіх/невдача тут
+ * не розрізняються навмисно — див. lib/auth/password-reset.ts). */
+export function recordAttempt(key: string, windowMs: number): void {
   const now = Date.now();
   const bucket = buckets.get(key);
 

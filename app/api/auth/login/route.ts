@@ -4,7 +4,7 @@ import { z } from "zod";
 import { authenticateUser } from "@/lib/auth/authenticate";
 import { createSession } from "@/lib/auth/session";
 import { setRefreshTokenCookie } from "@/lib/auth/cookies";
-import { checkRateLimit, recordFailedAttempt } from "@/lib/rate-limit";
+import { checkRateLimit, recordAttempt } from "@/lib/rate-limit";
 import { emailSchema } from "@/lib/auth/validation";
 
 const loginSchema = z.object({
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const parsed = loginSchema.safeParse(body);
 
   if (!parsed.success) {
-    recordFailedAttempt(ipKey, WINDOW_MS);
+    recordAttempt(ipKey, WINDOW_MS);
     return errorResponse(
       "validation_error",
       "Невалідний email або пароль.",
@@ -82,8 +82,8 @@ export async function POST(request: Request) {
   );
 
   if (!result.ok) {
-    recordFailedAttempt(ipKey, WINDOW_MS);
-    recordFailedAttempt(emailKey, WINDOW_MS);
+    recordAttempt(ipKey, WINDOW_MS);
+    recordAttempt(emailKey, WINDOW_MS);
 
     const messages: Record<typeof result.code, string> = {
       invalid_credentials: "Невірний email або пароль.",

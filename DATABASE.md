@@ -453,6 +453,23 @@
 
 ---
 
+## PasswordResetToken
+
+| Поле       | Тип                 | Опис                                                                               |
+| ---------- | ------------------- | ---------------------------------------------------------------------------------- |
+| id         | uuid (PK)           |                                                                                    |
+| user_id    | uuid (FK → User)    |                                                                                    |
+| token_hash | string, unique      | хеш токена (SHA-256), не сирий токен                                               |
+| expires_at | timestamp           | 1 година від видачі — коротше за EmailVerificationToken, скидання пароля чутливіше |
+| used_at    | timestamp, nullable | одноразовий                                                                        |
+| created_at | timestamp           |                                                                                    |
+
+`TODO`: та сама форма, що й EmailVerificationToken, додано під час задачі "запит на скидання пароля" (Phase 1, Реєстрація).
+
+Звʼязки: N:1 User.
+
+---
+
 ## AuditLog
 
 | Поле       | Тип                        | Опис                                                                            |
