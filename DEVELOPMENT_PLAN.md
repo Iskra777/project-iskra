@@ -28,7 +28,7 @@
 
 ✅ Налаштувати CI (автоматичні тести й білд на кожен pull request)
 
-🟡 Налаштувати CD на стейджинг-середовище — код-сторона готова (`railway.json`, health-check, [DEPLOYMENT.md](DEPLOYMENT.md)), ручні кроки (GitHub-репозиторій, Railway-акаунт) ще не виконані
+✅ Налаштувати CD на стейджинг-середовище — GitHub-репозиторій і Railway-проєкт підключені, `/api/health` живий на стейджингу (`project-iskra-production.up.railway.app`), деталі й здобуті уроки в [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ✅ Перевести DESIGN_SYSTEM.md у конкретні дизайн-токени: hex-коди для Electric Blue/Amber/Red/Green, типографічна шкала, spacing-шкала, брейкпоінти
 
