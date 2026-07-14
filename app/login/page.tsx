@@ -1,23 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { useSession } from "@/lib/auth/session-context";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-interface LoginUser {
-  id: string;
-  email: string;
-  username: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  role: string;
-}
 
 // Один в один з кодами помилок API.md → POST /api/auth/login.
 const ERROR_MESSAGES: Record<string, string> = {
@@ -30,13 +23,14 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const { login } = useSession();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState<string | undefined>();
   const [passwordError, setPasswordError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loggedInUser, setLoggedInUser] = useState<LoginUser | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,30 +69,18 @@ export default function LoginPage() {
         return;
       }
 
-      setLoggedInUser(data.user);
+      await login(data.accessToken);
       toast({
         title: "Вхід виконано",
         description: `Вітаємо, ${data.user.displayName ?? data.user.username}.`,
         variant: "success",
       });
+      router.push("/profile");
     } catch {
       setFormError("Немає з'єднання із сервером. Спробуйте ще раз.");
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  if (loggedInUser) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
-          <CardTitle>
-            Вітаємо, {loggedInUser.displayName ?? loggedInUser.username}
-          </CardTitle>
-          <CardDescription>Ви увійшли як {loggedInUser.email}.</CardDescription>
-        </Card>
-      </div>
-    );
   }
 
   return (
