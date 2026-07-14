@@ -40,3 +40,34 @@ export async function sendVerificationEmail(
     text: `Щоб підтвердити email, перейдіть за посиланням: ${verifyUrl}\n\nПосилання дійсне 24 години.`,
   });
 }
+
+export type VerifyEmailResult =
+  { ok: true } | { ok: false; code: "invalid_token" };
+
+/** "Уже використаний" токен трактується так само, як невалідний — той самий
+ * підхід, що й з повторним використанням відкликаного refresh-токена
+ * (lib/auth/session.ts): не варто розрізняти причину відмови зловмиснику. */
+export async function verifyEmailToken(
+  rawToken: string,
+): Promise<VerifyEmailResult> {
+  const record = await prisma.emailVerificationToken.findUnique({
+    where: { tokenHash: hashToken(rawToken) },
+  });
+
+  if (!record || record.usedAt || record.expiresAt < new Date()) {
+    return { ok: false, code: "invalid_token" };
+  }
+
+  await prisma.$transaction([
+    prisma.emailVerificationToken.update({
+      where: { id: record.id },
+      data: { usedAt: new Date() },
+    }),
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { isEmailVerified: true },
+    }),
+  ]);
+
+  return { ok: true };
+}
