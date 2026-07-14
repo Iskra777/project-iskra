@@ -108,3 +108,51 @@
 Немає — ендпоінт завжди повертає 200.
 
 `TODO`: access-токен окремо не інвалідується — короткоживий (15 хв) і stateless за дизайном; після логауту просто перестає поновлюватись через `/refresh`. Свідомий компроміс, не оверсайт.
+
+---
+
+## POST /api/auth/register
+
+### Request
+
+```json
+{
+  "email": "string",
+  "username": "string",
+  "password": "string",
+  "displayName": "string | null",
+  "consent": true
+}
+```
+
+`consent` — обов'язково `true`. Успішна реєстрація створює запис `ConsentRecord` ([DATABASE.md](DATABASE.md#consentrecord)) — фіксує, що й коли користувач прийняв.
+
+### Response 201
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "string",
+    "username": "string",
+    "displayName": "string | null",
+    "avatarUrl": "string | null",
+    "role": "user | moderator | admin"
+  }
+}
+```
+
+Без токенів — реєстрація не логінить одразу. `is_email_verified = false` за замовчуванням, а `POST /api/auth/login` уже блокує неверифікований email (`email_not_verified`) — узгоджено з наявною поведінкою, окремого рішення тут не було.
+
+### Помилки
+
+| code               | HTTP | Коли                                                                                                                      |
+| ------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------- |
+| `validation_error` | 400  | Невалідне тіло, відсутній/`false` `consent`, невалідний email                                                             |
+| `weak_password`    | 400  | Пароль не відповідає складності — правила визначаються в задачі "Реалізувати правила валідації email і складності пароля" |
+| `email_taken`      | 409  | Email вже зареєстровано                                                                                                   |
+| `username_taken`   | 409  | Username вже зайнятий                                                                                                     |
+
+`TODO`: `email_taken`/`username_taken` — окремі коди, на відміну від `invalid_credentials` у login. Тут злиття кодів не додало б anti-enumeration захисту (перебором однаково визначити зайнятість), лише погіршило б UX — стандартна поведінка при реєстрації показувати, яке саме поле зайняте.
+
+`TODO`: правила формату username (довжина, дозволені символи) не мають окремої задачі в DEVELOPMENT_PLAN.md — приєднані до задачі валідації email/пароля як природний сусід.
