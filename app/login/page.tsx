@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -133,6 +134,12 @@ export default function LoginPage() {
             {isSubmitting ? "Входимо..." : "Увійти"}
           </Button>
         </form>
+        <Link
+          href="/forgot-password"
+          className="mt-4 block text-center text-sm text-primary underline"
+        >
+          Забули пароль?
+        </Link>
       </Card>
     </div>
   );
