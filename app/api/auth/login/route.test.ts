@@ -89,6 +89,15 @@ describe("POST /api/auth/login", () => {
     expect(response.headers.get("set-cookie")).toContain("refresh_token=");
   });
 
+  it("logs in successfully when email casing differs from what's stored", async () => {
+    const differentCase = EMAILS.success.toUpperCase();
+    const response = await login(differentCase, PASSWORD);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.user.email).toBe(EMAILS.success);
+  });
+
   it("returns 401 invalid_credentials on wrong password", async () => {
     const response = await login(EMAILS.wrongPassword, "wrong password");
     const body = await response.json();

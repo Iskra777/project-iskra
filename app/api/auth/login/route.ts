@@ -5,9 +5,13 @@ import { authenticateUser } from "@/lib/auth/authenticate";
 import { createSession } from "@/lib/auth/session";
 import { setRefreshTokenCookie } from "@/lib/auth/cookies";
 import { checkRateLimit, recordFailedAttempt } from "@/lib/rate-limit";
+import { emailSchema } from "@/lib/auth/validation";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
+  // Мінімальна перевірка, не passwordSchema: complexity-правила застосовуються
+  // лише при встановленні пароля (реєстрація/зміна), не при вході — інакше
+  // старий акаунт з паролем коротшим за нові правила не зміг би залогінитись.
   password: z.string().min(1),
 });
 
@@ -55,7 +59,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const emailKey = `login:email:${parsed.data.email.toLowerCase()}`;
+  // emailSchema уже нормалізує в нижній регістр — тут повторний .toLowerCase() не потрібен.
+  const emailKey = `login:email:${parsed.data.email}`;
   const emailLimit = checkRateLimit(
     emailKey,
     MAX_ATTEMPTS_PER_EMAIL,

@@ -26,9 +26,10 @@ export type AuthenticateResult =
     };
 
 /**
- * Припущення: пошук за email — точне співпадіння (case-sensitive у Postgres).
- * Реєстрація (ще не реалізована) повинна зберігати email у нижньому регістрі,
- * інакше логін не знайде користувача, який ввів email в іншому регістрі.
+ * Пошук за email — точне співпадіння (case-sensitive у Postgres). Це безпечно,
+ * бо і login (app/api/auth/login/route.ts), і майбутня реєстрація нормалізують
+ * email через emailSchema (lib/auth/validation.ts) до нижнього регістру перед
+ * тим, як він сюди потрапляє — саме тут закрито колишній TODO про регістр.
  */
 export async function authenticateUser(
   email: string,
