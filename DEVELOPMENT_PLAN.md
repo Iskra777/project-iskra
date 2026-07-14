@@ -30,7 +30,7 @@
 
 🟡 Налаштувати CD на стейджинг-середовище — код-сторона готова (`railway.json`, health-check, [DEPLOYMENT.md](DEPLOYMENT.md)), ручні кроки (GitHub-репозиторій, Railway-акаунт) ще не виконані
 
-⬜ Перевести DESIGN_SYSTEM.md у конкретні дизайн-токени: hex-коди для Electric Blue/Amber/Red/Green, типографічна шкала, spacing-шкала, брейкпоінти
+✅ Перевести DESIGN_SYSTEM.md у конкретні дизайн-токени: hex-коди для Electric Blue/Amber/Red/Green, типографічна шкала, spacing-шкала, брейкпоінти
 
 ⬜ Побудувати базові UI-компоненти (кнопка, інпут, картка, модалка, toast) згідно з дизайн-токенами
 

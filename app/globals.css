@@ -5,25 +5,47 @@
   --background: #0b0f19;
   --foreground: #e7eaf0; /* TODO: точний відтінок тексту не зафіксовано в DESIGN_SYSTEM.md — практичний дефолт для читабельності */
   --card: #141a27;
+
+  /* DESIGN_SYSTEM.md → Colors. Крок 500 Tailwind CSS. */
+  --primary: #3b82f6;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+  --success: #22c55e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --radius-card: 16px;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-
-  /*
-   * TODO: Primary (Electric Blue), Accent (Amber), Danger (Red), Success (Green) —
-   * точні hex-коди не ухвалено в DESIGN_SYSTEM.md. Окрема задача Phase 0
-   * "Перевести DESIGN_SYSTEM.md у конкретні дизайн-токени".
-   */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* DESIGN_SYSTEM.md → Typography: шкала заголовків */
+@layer base {
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
 }

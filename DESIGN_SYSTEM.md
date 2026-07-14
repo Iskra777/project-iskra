@@ -32,19 +32,21 @@ Cards
 
 Primary
 
-Electric Blue
+Electric Blue — `#3B82F6`
 
 Accent
 
-Amber
+Amber — `#F59E0B`
 
 Danger
 
-Red
+Red — `#EF4444`
 
 Success
 
-Green
+Green — `#22C55E`
+
+`TODO`: hex обрані за конвенцією Tailwind CSS (крок 500) — узгоджено з обраним стек (ARCHITECTURE.md → Tech Stack), формально не пройшли WCAG-аудит контрасту, лише візуальну перевірку в наступній задачі (базові UI-компоненти).
 
 ---
 
@@ -73,6 +75,24 @@ Readable
 Large headings
 
 Comfortable spacing
+
+Шрифт — Geist (уже підключений через `next/font`).
+
+Шкала:
+
+| Рівень | Розмір          | Вага     |
+| ------ | --------------- | -------- |
+| h1     | 2.5rem (40px)   | bold     |
+| h2     | 2rem (32px)     | semibold |
+| h3     | 1.5rem (24px)   | semibold |
+| body   | 1rem (16px)     | regular  |
+| small  | 0.875rem (14px) | regular  |
+
+---
+
+## Spacing і брейкпоінти
+
+Стандартна шкала Tailwind CSS (4px база; брейкпоінти sm/md/lg/xl/2xl) без кастомізації — свідоме рішення, не пропуск: власна шкала не потрібна, поки немає конкретної причини відхилятись від дефолту.
 
 ---
 
