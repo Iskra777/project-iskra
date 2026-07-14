@@ -12,10 +12,10 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Prisma + PostgreSQL. Дета
 
 ```bash
 pnpm install
-cp .env.example .env   # заповнити DATABASE_URL реальним значенням
+cp .env.example .env   # заповнити JWT-секрети реальними значеннями
+docker compose up -d   # локальний Postgres, порт 5433
+pnpm prisma migrate dev
 pnpm dev
 ```
 
-Відкрити [http://localhost:3000](http://localhost:3000).
-
-Моделей Prisma ще немає — `prisma/schema.prisma` містить лише datasource і generator, без звʼязку з живою базою даних.
+Відкрити [http://localhost:3000](http://localhost:3000). Деталі — [DEPLOYMENT.md](DEPLOYMENT.md).

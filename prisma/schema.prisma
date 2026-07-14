@@ -11,3 +11,31 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Конвенція для всіх моделей: поля camelCase у клієнті, @map на snake_case
+// колонки й @@map на snake_case назву таблиці — узгоджено з DATABASE.md.
+
+enum UserRole {
+  user
+  moderator
+  admin
+}
+
+/// DATABASE.md → User
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  passwordHash    String    @map("password_hash")
+  username        String    @unique
+  displayName     String?   @map("display_name")
+  avatarUrl       String?   @map("avatar_url")
+  bio             String?
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  isActive        Boolean   @default(true) @map("is_active")
+  role            UserRole  @default(user)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  @@map("users")
+}

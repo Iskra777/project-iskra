@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: iskra-postgres
+    environment:
+      POSTGRES_USER: iskra
+      POSTGRES_PASSWORD: iskra_dev_password
+      POSTGRES_DB: iskra
+    ports:
+      - "5433:5432"
+    volumes:
+      - iskra_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  iskra_postgres_data:
