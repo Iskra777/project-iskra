@@ -2,18 +2,13 @@ import { NextResponse } from "next/server";
 
 import { refreshSession } from "@/lib/auth/session";
 import {
-  getRefreshTokenCookieName,
+  getRefreshTokenFromRequest,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
 } from "@/lib/auth/cookies";
 
 export async function POST(request: Request) {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader
-    .split(";")
-    .map((part) => part.trim())
-    .find((part) => part.startsWith(`${getRefreshTokenCookieName()}=`));
-  const refreshToken = match?.split("=").slice(1).join("=");
+  const refreshToken = getRefreshTokenFromRequest(request);
 
   if (!refreshToken) {
     return NextResponse.json(

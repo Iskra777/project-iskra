@@ -74,3 +74,21 @@ export async function refreshSession(
   const session = await createSession(record.userId);
   return { ok: true, session };
 }
+
+/** Ідемпотентно: якщо токен уже невалідний/протермінований — інвалідувати
+ * нічого, стан і так "не залогінений". Access-токен окремо не відкликається —
+ * він короткоживий (15хв) і stateless за дизайном, blacklist для нього
+ * не виправдовує додаткову інфраструктуру. */
+export async function revokeSession(refreshToken: string): Promise<void> {
+  let payload;
+  try {
+    payload = await verifyRefreshToken(refreshToken);
+  } catch {
+    return;
+  }
+
+  await prisma.refreshToken.updateMany({
+    where: { id: payload.jti, userId: payload.sub, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}

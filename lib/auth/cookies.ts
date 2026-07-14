@@ -20,6 +20,13 @@ export function clearRefreshTokenCookie(response: NextResponse): void {
   response.cookies.delete({ name: COOKIE_NAME, path: "/api/auth" });
 }
 
-export function getRefreshTokenCookieName(): string {
-  return COOKIE_NAME;
+export function getRefreshTokenFromRequest(
+  request: Request,
+): string | undefined {
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const match = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${COOKIE_NAME}=`));
+  return match?.split("=").slice(1).join("=");
 }
