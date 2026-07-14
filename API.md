@@ -39,7 +39,7 @@
 }
 ```
 
-Додатково `Set-Cookie: refresh_token=<jwt>; HttpOnly; Secure (лише production); SameSite=Lax; Path=/api/auth; Max-Age=2592000` (30 днів, збігається з `REFRESH_TOKEN_TTL` у [lib/auth/tokens.ts](lib/auth/tokens.ts)).
+Додатково `Set-Cookie: refresh_token=<jwt>; HttpOnly; Secure (лише production); SameSite=Lax; Path=/api/auth; Max-Age=2592000` (30 днів, збігається з `REFRESH_TOKEN_TTL_SECONDS` у [lib/auth/tokens.ts](lib/auth/tokens.ts)).
 
 ### Помилки
 
@@ -52,3 +52,31 @@
 | `rate_limited`        | 429  | Заготовка контракту під задачу "захист від brute-force" — ще не реалізовано                              |
 
 `TODO`: `account_deactivated`/`email_not_verified` навмисно отримують окремі коди, а не змішані з `invalid_credentials` — UI-вимога з DEVELOPMENT_PLAN.md ("невірний пароль, заблокований акаунт, непідтверджений email" — різні стани). Це невеликий компроміс проти enumeration-стійкості; реєстрація однаково розкриває зайнятість email через перевірку дублікатів, тож повна стійкість тут недосяжна в принципі.
+
+---
+
+## POST /api/auth/refresh
+
+Оновлює access-токен, використовуючи `refresh_token` cookie. Ротація: старий refresh-токен відкликається, видається нова пара.
+
+### Request
+
+Без тіла — токен береться з cookie `refresh_token` (виставляється при логіні, `Path=/api/auth`).
+
+### Response 200
+
+```json
+{
+  "accessToken": "string"
+}
+```
+
+Додатково новий `Set-Cookie: refresh_token=<jwt>; ...` (та сама конфігурація, що й у login).
+
+### Помилки
+
+| code            | HTTP | Коли                                                                                               |
+| --------------- | ---- | -------------------------------------------------------------------------------------------------- |
+| `invalid_token` | 401  | Cookie відсутня, JWT невалідний/протермінований, або відповідний RefreshToken відкликаний/не існує |
+
+`TODO`: повторне використання вже відкликаного refresh-токена (можлива ознака крадіжки) поки що просто повертає `invalid_token`, без додаткових дій (напр. масового відкликання всіх сесій користувача). Досить для MVP; розширити, якщо зʼявиться потреба.

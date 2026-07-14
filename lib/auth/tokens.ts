@@ -1,7 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 
 const ACCESS_TOKEN_TTL = "15m";
-const REFRESH_TOKEN_TTL = "30d";
+
+/** Єдине джерело правди для тривалості refresh-токена — використовується
+ * тут для підпису JWT, а також у lib/auth/session.ts для RefreshToken.expiresAt
+ * і Max-Age cookie, щоб усі три місця не розійшлись. */
+export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 function getSecret(name: "JWT_SECRET" | "JWT_REFRESH_SECRET") {
   const value = process.env[name];
@@ -43,7 +47,7 @@ export function signRefreshToken(
   return new SignJWT({ sub: userId, jti: tokenId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(REFRESH_TOKEN_TTL)
+    .setExpirationTime(`${REFRESH_TOKEN_TTL_SECONDS}s`)
     .sign(getSecret("JWT_REFRESH_SECRET"));
 }
 
