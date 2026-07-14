@@ -23,6 +23,7 @@
 | display_name      | string, nullable                           |                                                                  |
 | avatar_url        | string, nullable                           |                                                                  |
 | bio               | text, nullable                             |                                                                  |
+| location          | string, nullable                           |                                                                  |
 | is_email_verified | boolean, default false                     |                                                                  |
 | is_active         | boolean, default true                      | false — акаунт деактивовано користувачем                         |
 | role              | enum(user, moderator, admin), default user | спрощення замість окремих Role/Permission таблиць — `TODO` нижче |
@@ -35,6 +36,14 @@
 `TODO`: `role` — свідоме спрощення замість окремих таблиць Role/Permission для Admin Panel (ARCHITECTURE.md). Ніде в документах немає вимоги до гранульованих прав доступу; якщо вона зʼявиться, `role` доведеться мігрувати на повноцінний RBAC.
 
 `deleted_at` — при видаленні акаунта каскадна поведінка різна залежно від типу даних; повна семантика в [ARCHITECTURE.md](ARCHITECTURE.md#приватність-і-прозорість-даних).
+
+### Публічність полів (Profile, Phase 1)
+
+| Публічно (чужий профіль)                                          | Лише власнику                                                     |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------- |
+| id, username, display_name, avatar_url, bio, location, created_at | email, role, is_email_verified, is_active, updated_at, deleted_at |
+
+`TODO`: `email` навмисно приховано з чужого профілю, хоч і повертається в тілі відповіді логіну/реєстрації — там контекст інший ("це твої власні дані одразу після дії"), а не перегляд профілю сторонньою особою. `role` теж приховано з публічного профілю — не було вимоги показувати його публічно.
 
 ---
 

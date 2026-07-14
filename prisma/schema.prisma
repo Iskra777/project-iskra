@@ -30,6 +30,7 @@ model User {
   displayName     String?   @map("display_name")
   avatarUrl       String?   @map("avatar_url")
   bio             String?
+  location        String?
   isEmailVerified Boolean   @default(false) @map("is_email_verified")
   isActive        Boolean   @default(true) @map("is_active")
   role            UserRole  @default(user)
