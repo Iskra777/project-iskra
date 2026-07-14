@@ -61,7 +61,12 @@ describe("POST /api/auth/request-password-reset", () => {
   it("does not create a token for an unknown email", async () => {
     await requestReset("no-such-account-either@example.com");
 
-    const tokens = await prisma.passwordResetToken.findMany();
+    // Scoped through the (nonexistent) user relation rather than a bare
+    // findMany() — the table is shared with other test files running in
+    // parallel against the same DB, an unscoped query would pick up their rows.
+    const tokens = await prisma.passwordResetToken.findMany({
+      where: { user: { email: "no-such-account-either@example.com" } },
+    });
     expect(tokens).toHaveLength(0);
   });
 
