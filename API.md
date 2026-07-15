@@ -623,3 +623,34 @@ Query-параметр `q` (обов'язковий, 2-100 символів).
 | code            | HTTP | Коли                                 |
 | --------------- | ---- | ------------------------------------ |
 | `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+
+---
+
+## GET /api/users/me/friends
+
+Список прийнятих (`accepted`) друзів. Напрямок requester/addressee не має значення після accept — повертається завжди "інший" учасник пари. Деактивовані/видалені друзі виключено.
+
+### Request
+
+Без тіла — токен через `Authorization`.
+
+### Response 200
+
+```json
+{
+  "friends": [
+    {
+      "id": "uuid",
+      "username": "string",
+      "displayName": "string | null",
+      "avatarUrl": "string | null"
+    }
+  ]
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
