@@ -16,11 +16,20 @@ import { Input } from "@/components/ui/input";
 import { useSession } from "@/lib/auth/session-context";
 import { useToast } from "@/components/ui/toast";
 
-interface OtherParticipant {
+interface Participant {
   id: string;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
+  role: string;
+}
+
+interface ConversationDetail {
+  id: string;
+  type: string;
+  title: string | null;
+  otherParticipant: Participant | null;
+  participants: Participant[];
 }
 
 interface ChatMessage {
@@ -49,8 +58,9 @@ export default function ChatPage() {
   const { toast } = useToast();
 
   const [status, setStatus] = useState<Status>("loading");
-  const [otherParticipant, setOtherParticipant] =
-    useState<OtherParticipant | null>(null);
+  const [conversation, setConversation] = useState<ConversationDetail | null>(
+    null,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -104,7 +114,7 @@ export default function ChatPage() {
         const conversationBody = await conversationRes.json();
         const historyBody = await historyRes.json();
 
-        setOtherParticipant(conversationBody.conversation.otherParticipant);
+        setConversation(conversationBody.conversation);
         setMessages([...historyBody.messages].reverse());
         setNextCursor(historyBody.nextCursor);
         scrollActionRef.current = "bottom";
@@ -311,6 +321,15 @@ export default function ChatPage() {
     otherLastReadAt !== null &&
     new Date(otherLastReadAt) >= new Date(lastOwnMessage.sentAt);
 
+  const isGroup = conversation?.type === "group";
+  const headerName = isGroup
+    ? (conversation?.title ?? "Група")
+    : (conversation?.otherParticipant?.displayName ??
+      conversation?.otherParticipant?.username);
+  const participantsById = new Map(
+    (conversation?.participants ?? []).map((p) => [p.id, p]),
+  );
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center gap-3 border-b border-foreground/10 bg-card px-4 py-3">
@@ -320,16 +339,17 @@ export default function ChatPage() {
           </Button>
         </Link>
         <Avatar
-          src={otherParticipant?.avatarUrl}
-          alt={
-            otherParticipant?.displayName ?? otherParticipant?.username ?? "?"
-          }
+          src={isGroup ? null : conversation?.otherParticipant?.avatarUrl}
+          alt={headerName ?? "?"}
           size={36}
         />
         <div className="min-w-0">
-          <div className="truncate text-sm font-medium">
-            {otherParticipant?.displayName ?? otherParticipant?.username}
-          </div>
+          <div className="truncate text-sm font-medium">{headerName}</div>
+          {isGroup && (
+            <div className="truncate text-xs text-foreground/60">
+              {conversation?.participants.length} учасників
+            </div>
+          )}
           {isOtherTyping && (
             <div className="text-xs text-primary">набирає текст...</div>
           )}
@@ -353,6 +373,7 @@ export default function ChatPage() {
         <div className="flex flex-col gap-2">
           {messages.map((message) => {
             const isOwn = message.senderId === user.id;
+            const sender = participantsById.get(message.senderId);
             return (
               <div
                 key={message.id}
@@ -363,6 +384,11 @@ export default function ChatPage() {
                     isOwn ? "bg-primary text-white" : "bg-card text-foreground"
                   }`}
                 >
+                  {isGroup && !isOwn && (
+                    <div className="mb-0.5 text-xs font-medium text-primary">
+                      {sender?.displayName ?? sender?.username ?? "?"}
+                    </div>
+                  )}
                   <div className="whitespace-pre-wrap break-words">
                     {message.content}
                   </div>
@@ -379,7 +405,9 @@ export default function ChatPage() {
           })}
         </div>
 
-        {lastOwnMessage && isLastOwnMessageRead && (
+        {/* У групі "read" від WS не каже, хто саме прочитав — показ
+            індикатора однозначний лише для 1:1, тому тут вимкнено. */}
+        {!isGroup && lastOwnMessage && isLastOwnMessageRead && (
           <div className="mt-1 text-right text-xs text-foreground/50">
             Прочитано
           </div>

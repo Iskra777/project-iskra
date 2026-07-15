@@ -10,6 +10,8 @@ import { useSession } from "@/lib/auth/session-context";
 
 interface ConversationListItem {
   id: string;
+  type: string;
+  title: string | null;
   otherParticipant: {
     id: string;
     username: string;
@@ -98,9 +100,16 @@ export default function MessagesPage() {
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
       <Card className="w-full max-w-md">
-        <div className="mb-6">
-          <CardTitle>Повідомлення</CardTitle>
-          <CardDescription>Твої розмови.</CardDescription>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <CardTitle>Повідомлення</CardTitle>
+            <CardDescription>Твої розмови.</CardDescription>
+          </div>
+          <Link href="/messages/new-group">
+            <Button variant="secondary" size="sm">
+              Нова група
+            </Button>
+          </Link>
         </div>
 
         {status === "error" && (
@@ -119,9 +128,10 @@ export default function MessagesPage() {
           {status === "success" &&
             conversations.map((conversation) => {
               const other = conversation.otherParticipant;
-              const name = other
-                ? (other.displayName ?? other.username)
-                : "Розмова";
+              const name =
+                conversation.type === "group"
+                  ? (conversation.title ?? "Група")
+                  : (other?.displayName ?? other?.username ?? "Розмова");
 
               return (
                 <Link
@@ -129,7 +139,13 @@ export default function MessagesPage() {
                   href={`/messages/${conversation.id}`}
                   className="flex items-center gap-3 rounded-card p-3 transition-colors duration-150 hover:bg-background"
                 >
-                  <Avatar src={other?.avatarUrl} alt={name} size={40} />
+                  <Avatar
+                    src={
+                      conversation.type === "group" ? null : other?.avatarUrl
+                    }
+                    alt={name}
+                    size={40}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm font-medium">
