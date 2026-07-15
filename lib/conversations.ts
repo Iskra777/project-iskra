@@ -63,3 +63,88 @@ export function findParticipant(conversationId: string, userId: string) {
     where: { conversationId_userId: { conversationId, userId } },
   });
 }
+
+export interface ConversationListItem {
+  id: string;
+  type: string;
+  otherParticipant: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null;
+  lastMessage: {
+    id: string;
+    content: string;
+    senderId: string;
+    sentAt: Date;
+  } | null;
+  unread: boolean;
+}
+
+/**
+ * Inbox для GET /api/conversations, відсортований за активністю
+ * (Conversation.updatedAt, оновлюється при кожному новому повідомленні).
+ * Лише `direct` розмови мають сенс для `otherParticipant` — групові чати
+ * (наступна задача плану) розширять цю функцію пізніше.
+ */
+export async function listConversations(
+  userId: string,
+): Promise<ConversationListItem[]> {
+  const rows = await prisma.conversationParticipant.findMany({
+    where: { userId },
+    orderBy: { conversation: { updatedAt: "desc" } },
+    include: {
+      conversation: {
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          messages: {
+            where: { deletedAt: null },
+            orderBy: { sentAt: "desc" },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  return rows.map((row) => {
+    const { conversation } = row;
+    const otherParticipant =
+      conversation.type === "direct"
+        ? (conversation.participants.find((p) => p.userId !== userId)?.user ??
+          null)
+        : null;
+    const lastMessage = conversation.messages[0] ?? null;
+    const unread =
+      lastMessage !== null &&
+      lastMessage.senderId !== userId &&
+      (!row.lastReadAt || lastMessage.sentAt > row.lastReadAt);
+
+    return {
+      id: conversation.id,
+      type: conversation.type,
+      otherParticipant,
+      lastMessage: lastMessage
+        ? {
+            id: lastMessage.id,
+            content: lastMessage.content,
+            senderId: lastMessage.senderId,
+            sentAt: lastMessage.sentAt,
+          }
+        : null,
+      unread,
+    };
+  });
+}

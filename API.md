@@ -660,6 +660,52 @@ Query-параметр `q` (обов'язковий, 2-100 символів).
 
 ---
 
+## GET /api/conversations
+
+Inbox — список розмов поточного користувача, відсортований за активністю (`Conversation.updatedAt`, оновлюється при кожному новому повідомленні).
+
+### Request
+
+Без параметрів.
+
+### Response 200
+
+```json
+{
+  "conversations": [
+    {
+      "id": "uuid",
+      "type": "direct",
+      "otherParticipant": {
+        "id": "uuid",
+        "username": "string",
+        "displayName": "string | null",
+        "avatarUrl": "string | null"
+      },
+      "lastMessage": {
+        "id": "uuid",
+        "content": "string",
+        "senderId": "uuid",
+        "sentAt": "timestamp"
+      },
+      "unread": true
+    }
+  ]
+}
+```
+
+`otherParticipant` і `lastMessage` — `null`, якщо відповідно нема іншого учасника (поки що незастосовно — лише `direct` розмови існують) або в розмові ще нема повідомлень. `unread` = останнє повідомлення надіслав не я, і воно новіше за мій `ConversationParticipant.lastReadAt` (той самий механізм, що й `PATCH .../read`).
+
+`TODO`: `otherParticipant` розрахований лише для `type: "direct"` — групові розмови (наступна задача плану "Групові чати") розширять цю логіку (список учасників замість одного).
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+
+---
+
 ## POST /api/conversations
 
 Створює `direct`-розмову з іншим користувачем, або повертає вже наявну (не дублює).

@@ -3,7 +3,10 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/auth/current-user";
-import { createDirectConversation } from "@/lib/conversations";
+import {
+  createDirectConversation,
+  listConversations,
+} from "@/lib/conversations";
 
 const createConversationSchema = z.object({
   username: z.string().min(1),
@@ -18,6 +21,21 @@ const ERROR_MESSAGES: Record<string, string> = {
   cannot_message_self: "Не можна написати самому собі.",
   blocked: "Неможливо почати розмову.",
 };
+
+export async function GET(request: Request) {
+  const userId = await getUserIdFromRequest(request);
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: { code: "invalid_token", message: "Не авторизовано." } },
+      { status: 401 },
+    );
+  }
+
+  const conversations = await listConversations(userId);
+
+  return NextResponse.json({ conversations });
+}
 
 export async function POST(request: Request) {
   const userId = await getUserIdFromRequest(request);

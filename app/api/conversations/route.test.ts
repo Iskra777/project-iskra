@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { signAccessToken } from "@/lib/auth/tokens";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const PREFIX = "conv_create_test_";
 
@@ -20,6 +20,14 @@ function createConversation(username: unknown, accessToken?: string) {
       body: JSON.stringify({ username }),
     }),
   );
+}
+
+function getConversations(accessToken?: string) {
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers.authorization = `Bearer ${accessToken}`;
+  }
+  return GET(new Request("http://localhost/api/conversations", { headers }));
 }
 
 let aliceId: string;
@@ -48,6 +56,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.message.deleteMany({
+    where: { senderId: { in: [aliceId, bobId] } },
+  });
   await prisma.conversationParticipant.deleteMany({
     where: { userId: { in: [aliceId, bobId] } },
   });
@@ -133,6 +144,100 @@ describe("POST /api/conversations", () => {
 
   it("returns 401 without a token", async () => {
     const response = await createConversation(`${PREFIX}bob`);
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("invalid_token");
+  });
+});
+
+describe("GET /api/conversations", () => {
+  it("повертає порожній список без розмов", async () => {
+    const token = await signAccessToken(aliceId);
+    const response = await getConversations(token);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.conversations).toEqual([]);
+  });
+
+  it("повертає останнє повідомлення й unread=true, коли писав інший учасник", async () => {
+    const aliceToken = await signAccessToken(aliceId);
+    const created = await createConversation(`${PREFIX}bob`, aliceToken);
+    const createdBody = await created.json();
+    const conversationId = createdBody.conversation.id;
+
+    await prisma.message.create({
+      data: { conversationId, senderId: bobId, content: "Привіт!" },
+    });
+
+    const response = await getConversations(aliceToken);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.conversations).toHaveLength(1);
+    const conversation = body.conversations[0];
+    expect(conversation.otherParticipant.username).toBe(`${PREFIX}bob`);
+    expect(conversation.lastMessage.content).toBe("Привіт!");
+    expect(conversation.unread).toBe(true);
+  });
+
+  it("unread=false, коли останнє повідомлення від самого користувача", async () => {
+    const aliceToken = await signAccessToken(aliceId);
+    const created = await createConversation(`${PREFIX}bob`, aliceToken);
+    const createdBody = await created.json();
+
+    await prisma.message.create({
+      data: {
+        conversationId: createdBody.conversation.id,
+        senderId: aliceId,
+        content: "Привіт від мене",
+      },
+    });
+
+    const response = await getConversations(aliceToken);
+    const body = await response.json();
+
+    expect(body.conversations[0].unread).toBe(false);
+  });
+
+  it("сортує розмови за активністю (найновіша перша)", async () => {
+    const carol = await prisma.user.create({
+      data: {
+        email: `${PREFIX}carol@example.com`,
+        username: `${PREFIX}carol`,
+        passwordHash: await hashPassword("correct horse battery staple"),
+      },
+    });
+
+    const aliceToken = await signAccessToken(aliceId);
+    const firstConv = await (
+      await createConversation(`${PREFIX}bob`, aliceToken)
+    ).json();
+    const secondConv = await (
+      await createConversation(`${PREFIX}carol`, aliceToken)
+    ).json();
+
+    // Штучно робимо першу розмову новішою за активністю, ніж другу.
+    await prisma.conversation.update({
+      where: { id: firstConv.conversation.id },
+      data: { updatedAt: new Date() },
+    });
+
+    const response = await getConversations(aliceToken);
+    const body = await response.json();
+
+    expect(body.conversations[0].id).toBe(firstConv.conversation.id);
+    expect(body.conversations[1].id).toBe(secondConv.conversation.id);
+
+    await prisma.conversationParticipant.deleteMany({
+      where: { userId: carol.id },
+    });
+    await prisma.user.delete({ where: { id: carol.id } });
+  });
+
+  it("returns 401 without a token", async () => {
+    const response = await getConversations();
     const body = await response.json();
 
     expect(response.status).toBe(401);
