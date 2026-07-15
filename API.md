@@ -404,3 +404,32 @@ Rate limit — 3/год на email, 10/год на IP. Перевірка лім
 | `invalid_token`       | 401  | `Authorization` відсутній/невалідний/акаунт неактивний |
 | `validation_error`    | 400  | Поле `password` відсутнє/порожнє                       |
 | `invalid_credentials` | 401  | Невірний пароль                                        |
+
+---
+
+## GET /api/users/me/export
+
+Експорт власних даних — Principle 5. Повертає структурований JSON-дамп усіх даних, де користувач є власником.
+
+**Скоуп Phase 1:** лише профіль (`User`) — інші сутності з повного списку в [ARCHITECTURE.md](ARCHITECTURE.md#приватність-і-прозорість-даних) (Goal, Post, Message тощо) ще не реалізовані в застосунку. Формат відповіді (`{ user: {...} }`) розрахований на розширення додатковими ключами, коли ці сутності зʼявляться.
+
+### Request
+
+Без тіла — токен через `Authorization`.
+
+### Response 200
+
+```json
+{
+  "exportedAt": "string (ISO 8601)",
+  "user": {/* той самий повний набір полів, що й у GET /api/auth/me */}
+}
+```
+
+`Content-Disposition: attachment; filename="iskra-data-export.json"` — браузер сам пропонує зберегти файл. У `AuditLog` пишеться запис `data_export_requested`.
+
+### Помилки
+
+| code            | HTTP | Коли                                                   |
+| --------------- | ---- | ------------------------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний/акаунт неактивний |

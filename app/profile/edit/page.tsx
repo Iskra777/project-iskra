@@ -77,6 +77,8 @@ export default function EditProfilePage() {
   const [deleteError, setDeleteError] = useState<string | undefined>();
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [isExporting, setIsExporting] = useState(false);
+
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
@@ -214,6 +216,30 @@ export default function EditProfilePage() {
     }
   }
 
+  async function handleExportData() {
+    setIsExporting(true);
+    try {
+      const response = await fetch("/api/users/me/export", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) {
+        toast({ title: "Не вдалося завантажити дані", variant: "danger" });
+        return;
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "iskra-data-export.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Немає з'єднання із сервером", variant: "danger" });
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDeleteError(undefined);
@@ -323,6 +349,21 @@ export default function EditProfilePage() {
             </Link>
           </div>
         </form>
+      </Card>
+
+      <Card className="mt-4 w-full max-w-sm">
+        <CardTitle>Мої дані</CardTitle>
+        <CardDescription className="mb-4">
+          Завантажте копію даних, які Iskra зберігає про вас.
+        </CardDescription>
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={handleExportData}
+          disabled={isExporting}
+        >
+          {isExporting ? "Готуємо файл..." : "Завантажити мої дані"}
+        </Button>
       </Card>
 
       <Card className="mt-4 w-full max-w-sm border border-danger/30">
