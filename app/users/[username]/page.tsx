@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,12 +33,14 @@ type Status = "loading" | "success" | "not_found";
 
 export default function PublicProfilePage() {
   const params = useParams<{ username: string }>();
+  const router = useRouter();
   const { accessToken, isLoading: isSessionLoading } = useSession();
   const { toast } = useToast();
 
   const [status, setStatus] = useState<Status>("loading");
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [isActing, setIsActing] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
 
   const loadProfile = useCallback(() => {
     return fetch(`/api/users/${params.username}`, {
@@ -120,6 +122,30 @@ export default function PublicProfilePage() {
     );
   }
 
+  async function startChat() {
+    setIsStartingChat(true);
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ username: params.username }),
+      });
+      if (!response.ok) {
+        toast({ title: "Не вдалося почати розмову", variant: "danger" });
+        return;
+      }
+      const body = await response.json();
+      router.push(`/messages/${body.conversation.id}`);
+    } catch {
+      toast({ title: "Немає з'єднання із сервером", variant: "danger" });
+    } finally {
+      setIsStartingChat(false);
+    }
+  }
+
   function removeRelationship(successMessage: string) {
     return performAction(
       () =>
@@ -184,6 +210,19 @@ export default function PublicProfilePage() {
             {new Date(profile.createdAt).toLocaleDateString("uk-UA")}
           </div>
         </div>
+
+        {profile.friendshipStatus !== undefined &&
+          profile.friendshipStatus !== "blocked_by_viewer" &&
+          profile.friendshipStatus !== "blocked_by_other" && (
+            <Button
+              variant="secondary"
+              className="mt-6 w-full"
+              disabled={isStartingChat}
+              onClick={startChat}
+            >
+              Написати повідомлення
+            </Button>
+          )}
 
         {profile.friendshipStatus === "none" && (
           <Button
