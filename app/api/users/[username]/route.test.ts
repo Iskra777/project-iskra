@@ -49,6 +49,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.friendship.deleteMany({
+    where: {
+      OR: [
+        { requesterId: { in: [userId, otherUserId] } },
+        { addresseeId: { in: [userId, otherUserId] } },
+      ],
+    },
+  });
   await prisma.user.deleteMany({
     where: { id: { in: [userId, otherUserId] } },
   });
@@ -116,5 +124,84 @@ describe("GET /api/users/:username", () => {
 
     expect(response.status).toBe(200);
     expect(body.user.email).toBeUndefined();
+  });
+
+  it("omits friendshipStatus for an anonymous request", async () => {
+    const response = await getProfile(USERNAME);
+    const body = await response.json();
+
+    expect(body.user.friendshipStatus).toBeUndefined();
+  });
+
+  it("reports friendshipStatus: none when there is no relationship", async () => {
+    const otherToken = await signAccessToken(otherUserId);
+    const response = await getProfile(USERNAME, otherToken);
+    const body = await response.json();
+
+    expect(body.user.friendshipStatus).toBe("none");
+  });
+
+  it("reports friendshipStatus: pending_sent when the viewer sent the request", async () => {
+    await prisma.friendship.create({
+      data: {
+        requesterId: otherUserId,
+        addresseeId: userId,
+        status: "pending",
+      },
+    });
+    const otherToken = await signAccessToken(otherUserId);
+    const response = await getProfile(USERNAME, otherToken);
+    const body = await response.json();
+
+    expect(body.user.friendshipStatus).toBe("pending_sent");
+  });
+
+  it("reports friendshipStatus: pending_received when the viewer got the request", async () => {
+    await prisma.friendship.create({
+      data: {
+        requesterId: userId,
+        addresseeId: otherUserId,
+        status: "pending",
+      },
+    });
+    const otherToken = await signAccessToken(otherUserId);
+    const response = await getProfile(USERNAME, otherToken);
+    const body = await response.json();
+
+    expect(body.user.friendshipStatus).toBe("pending_received");
+  });
+
+  it("reports friendshipStatus: accepted", async () => {
+    await prisma.friendship.create({
+      data: {
+        requesterId: userId,
+        addresseeId: otherUserId,
+        status: "accepted",
+      },
+    });
+    const otherToken = await signAccessToken(otherUserId);
+    const response = await getProfile(USERNAME, otherToken);
+    const body = await response.json();
+
+    expect(body.user.friendshipStatus).toBe("accepted");
+  });
+
+  it("reports friendshipStatus: blocked_by_viewer / blocked_by_other symmetrically", async () => {
+    await prisma.friendship.create({
+      data: {
+        requesterId: otherUserId,
+        addresseeId: userId,
+        status: "blocked",
+      },
+    });
+    const otherToken = await signAccessToken(otherUserId);
+    const viewerResponse = await getProfile(USERNAME, otherToken);
+    const viewerBody = await viewerResponse.json();
+    expect(viewerBody.user.friendshipStatus).toBe("blocked_by_viewer");
+
+    const ownerToken = await signAccessToken(userId);
+    const ownerResponse = await getProfile(OTHER_USERNAME, ownerToken);
+    const ownerBody = await ownerResponse.json();
+    expect(ownerBody.user.friendshipStatus).toBe("blocked_by_other");
   });
 });

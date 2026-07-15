@@ -275,10 +275,13 @@ Rate limit — 3/год на email, 10/год на IP. Перевірка лім
     "avatarUrl": "string | null",
     "bio": "string | null",
     "location": "string | null",
-    "createdAt": "timestamp"
+    "createdAt": "timestamp",
+    "friendshipStatus": "none | pending_sent | pending_received | accepted | blocked_by_viewer | blocked_by_other | undefined"
   }
 }
 ```
+
+`friendshipStatus` — лише коли переглядач авторизований (`undefined` для анонімного запиту чи власного профілю). Керує кнопкою додати/видалити друга в UI. `blocked_by_other` **не** ховає профіль і не блокує звичайний перегляд — свідома, задокументована прогалина анти-enumeration (див. `TODO` у `POST .../friend-request` вище).
 
 ### Response 200 (власний профіль — `Authorization` належить цьому користувачу)
 

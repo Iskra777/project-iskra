@@ -162,3 +162,38 @@ export async function blockUser(
 
   return { ok: true };
 }
+
+export type FriendshipStatusView =
+  | "none"
+  | "pending_sent"
+  | "pending_received"
+  | "accepted"
+  | "blocked_by_viewer"
+  | "blocked_by_other";
+
+/** Статус стосунку з точки зору `viewerId`, що дивиться на профіль
+ * `targetId` — для UI-кнопки "додати/видалити друга" на профілі. */
+export async function getFriendshipStatus(
+  viewerId: string,
+  targetId: string,
+): Promise<FriendshipStatusView> {
+  const row = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { requesterId: viewerId, addresseeId: targetId },
+        { requesterId: targetId, addresseeId: viewerId },
+      ],
+    },
+  });
+
+  if (!row) return "none";
+  if (row.status === "accepted") return "accepted";
+
+  if (row.status === "pending") {
+    return row.requesterId === viewerId ? "pending_sent" : "pending_received";
+  }
+
+  return row.requesterId === viewerId
+    ? "blocked_by_viewer"
+    : "blocked_by_other";
+}

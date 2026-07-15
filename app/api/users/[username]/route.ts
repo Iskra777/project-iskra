@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/auth/current-user";
+import { getFriendshipStatus } from "@/lib/friendships";
 
 export async function GET(
   request: Request,
@@ -35,7 +36,13 @@ export async function GET(
   const isOwner = requesterId === user.id;
 
   if (!isOwner) {
-    return NextResponse.json({ user: publicProfile });
+    const friendshipStatus = requesterId
+      ? await getFriendshipStatus(requesterId, user.id)
+      : undefined;
+
+    return NextResponse.json({
+      user: { ...publicProfile, friendshipStatus },
+    });
   }
 
   return NextResponse.json({
