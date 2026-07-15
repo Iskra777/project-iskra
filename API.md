@@ -294,6 +294,41 @@ Rate limit — 3/год на email, 10/год на IP. Перевірка лім
 
 ---
 
+## GET /api/users/search
+
+Пошук користувачів за підрядком `username`/`displayName`, регістронезалежно. Публічний ендпоінт — авторизація не потрібна (той самий рівень доступу, що й `GET /api/users/:username`).
+
+### Request
+
+Query-параметр `q` (обов'язковий, 2-100 символів).
+
+### Response 200
+
+```json
+{
+  "users": [
+    {
+      "id": "uuid",
+      "username": "string",
+      "displayName": "string | null",
+      "avatarUrl": "string | null"
+    }
+  ]
+}
+```
+
+Максимум 20 результатів, без пагінації — Phase 1, датасет малий. Деактивовані/видалені акаунти виключено. Прискорено GIN trigram-індексами (`pg_trgm`) на `username`/`display_name` — [migration.sql](prisma/migrations/20260715071425_add_user_search_indexes/migration.sql).
+
+### Помилки
+
+| code               | HTTP | Коли                                    |
+| ------------------ | ---- | --------------------------------------- |
+| `validation_error` | 400  | `q` відсутній або коротший за 2 символи |
+
+`TODO`: без авторизації і без rate-limit — прийнятно для MVP (як і `GET /api/users/:username`), але потенційний вектор для scraping усієї бази користувачів при масштабуванні; задокументовано як відомий ризик в ARCHITECTURE.md.
+
+---
+
 ## GET /api/auth/me
 
 "Хто я" — використовується клієнтським `SessionProvider` ([lib/auth/session-context.tsx](lib/auth/session-context.tsx)) для відновлення сесії при завантаженні застосунку (після `POST /api/auth/refresh`, коли є accessToken, але ще невідомо, кому він належить).

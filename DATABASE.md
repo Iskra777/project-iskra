@@ -37,6 +37,8 @@
 
 `deleted_at` — при видаленні акаунта каскадна поведінка різна залежно від типу даних; повна семантика в [ARCHITECTURE.md](ARCHITECTURE.md#приватність-і-прозорість-даних).
 
+GIN trigram-індекси (`pg_trgm`) на `username` і `display_name` — швидкий substring-пошук, `GET /api/users/search` (API.md).
+
 ### Публічність полів (Profile, Phase 1)
 
 | Публічно (чужий профіль)                                          | Лише власнику                                                     |
