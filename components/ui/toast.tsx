@@ -39,7 +39,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = React.useState<ToastItem[]>([]);
 
   const toast = React.useCallback((item: Omit<ToastItem, "id">) => {
-    const id = crypto.randomUUID();
+    // Не crypto.randomUUID() — воно недоступне в "небезпечному контексті"
+    // (звичайний HTTP на хості, відмінному від localhost, напр. телефон
+    // через LAN IP), а унікальність тут потрібна лише в межах клієнтської
+    // сесії для React-ключів, без криптографічних гарантій.
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setItems((prev) => [...prev, { ...item, id }]);
   }, []);
 

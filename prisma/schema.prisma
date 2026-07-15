@@ -63,6 +63,7 @@ model User {
   friendshipsAsRequester     Friendship[]              @relation("FriendshipRequester")
   friendshipsAsAddressee     Friendship[]              @relation("FriendshipAddressee")
   conversationParticipations ConversationParticipant[]
+  sentMessages               Message[]
 
   @@map("users")
 }
@@ -166,6 +167,7 @@ model Conversation {
   updatedAt DateTime         @updatedAt @map("updated_at")
 
   participants ConversationParticipant[]
+  messages     Message[]
 
   @@map("conversations")
 }
@@ -185,4 +187,21 @@ model ConversationParticipant {
 
   @@unique([conversationId, userId])
   @@map("conversation_participants")
+}
+
+/// DATABASE.md → Message. `content` завжди актуальний текст, без окремої
+/// історії редагувань; `deletedAt` ховає повідомлення для всіх учасників.
+model Message {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @map("conversation_id") @db.Uuid
+  senderId       String    @map("sender_id") @db.Uuid
+  content        String
+  sentAt         DateTime  @default(now()) @map("sent_at")
+  editedAt       DateTime? @map("edited_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@map("messages")
 }
