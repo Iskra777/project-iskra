@@ -588,3 +588,38 @@ Query-параметр `q` (обов'язковий, 2-100 символів).
 | `not_found`         | 404  | Username не існує, або акаунт деактивований/видалений |
 | `cannot_block_self` | 400  | Спроба заблокувати самого себе                        |
 | `already_blocked`   | 409  | Стосунок уже `blocked` (в обидва боки)                |
+
+---
+
+## GET /api/users/me/friend-requests
+
+Вхідні (не вихідні) запити дружби зі статусом `pending`. Запити від деактивованих/видалених акаунтів виключено.
+
+### Request
+
+Без тіла — токен через `Authorization`.
+
+### Response 200
+
+```json
+{
+  "requests": [
+    {
+      "id": "uuid (Friendship.id)",
+      "createdAt": "timestamp",
+      "requester": {
+        "id": "uuid",
+        "username": "string",
+        "displayName": "string | null",
+        "avatarUrl": "string | null"
+      }
+    }
+  ]
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
