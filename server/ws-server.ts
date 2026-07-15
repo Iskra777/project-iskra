@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { verifyAccessToken } from "@/lib/auth/tokens";
 import { findParticipant } from "@/lib/conversations";
 
-const NOTIFY_CHANNEL = "new_message";
+const NEW_MESSAGE_CHANNEL = "new_message";
+const CONVERSATION_READ_CHANNEL = "conversation_read";
 
 interface ClientState {
   userId: string;
@@ -35,50 +36,83 @@ export async function createWsServer(port: number) {
 
   const pgClient = new PgClient({ connectionString: process.env.DATABASE_URL });
   await pgClient.connect();
-  await pgClient.query(`LISTEN ${NOTIFY_CHANNEL}`);
+  await pgClient.query(`LISTEN ${NEW_MESSAGE_CHANNEL}`);
+  await pgClient.query(`LISTEN ${CONVERSATION_READ_CHANNEL}`);
 
-  pgClient.on("notification", async (notification) => {
-    if (notification.channel !== NOTIFY_CHANNEL || !notification.payload) {
-      return;
-    }
-
-    let parsed: { conversationId?: string; messageId?: string };
-    try {
-      parsed = JSON.parse(notification.payload);
-    } catch {
-      return;
-    }
-    if (!parsed.conversationId || !parsed.messageId) {
-      return;
-    }
-
-    const room = rooms.get(parsed.conversationId);
-    if (!room || room.size === 0) {
-      return;
-    }
-
-    const message = await prisma.message.findUnique({
-      where: { id: parsed.messageId },
-    });
-    if (!message || message.deletedAt) {
-      return;
-    }
-
-    const frame = JSON.stringify({
-      type: "message",
-      message: {
-        id: message.id,
-        conversationId: message.conversationId,
-        senderId: message.senderId,
-        content: message.content,
-        sentAt: message.sentAt,
-      },
-    });
-
+  function broadcast(
+    conversationId: string,
+    frame: string,
+    except?: WebSocket,
+  ) {
+    const room = rooms.get(conversationId);
+    if (!room) return;
     for (const socket of room) {
-      if (socket.readyState === WebSocket.OPEN) {
+      if (socket !== except && socket.readyState === WebSocket.OPEN) {
         socket.send(frame);
       }
+    }
+  }
+
+  pgClient.on("notification", async (notification) => {
+    if (!notification.payload) return;
+
+    if (notification.channel === NEW_MESSAGE_CHANNEL) {
+      let parsed: { conversationId?: string; messageId?: string };
+      try {
+        parsed = JSON.parse(notification.payload);
+      } catch {
+        return;
+      }
+      if (!parsed.conversationId || !parsed.messageId) return;
+
+      const room = rooms.get(parsed.conversationId);
+      if (!room || room.size === 0) return;
+
+      const message = await prisma.message.findUnique({
+        where: { id: parsed.messageId },
+      });
+      if (!message || message.deletedAt) return;
+
+      broadcast(
+        parsed.conversationId,
+        JSON.stringify({
+          type: "message",
+          message: {
+            id: message.id,
+            conversationId: message.conversationId,
+            senderId: message.senderId,
+            content: message.content,
+            sentAt: message.sentAt,
+          },
+        }),
+      );
+      return;
+    }
+
+    if (notification.channel === CONVERSATION_READ_CHANNEL) {
+      let parsed: {
+        conversationId?: string;
+        userId?: string;
+        lastReadAt?: string;
+      };
+      try {
+        parsed = JSON.parse(notification.payload);
+      } catch {
+        return;
+      }
+      if (!parsed.conversationId || !parsed.userId || !parsed.lastReadAt) {
+        return;
+      }
+
+      broadcast(
+        parsed.conversationId,
+        JSON.stringify({
+          type: "read",
+          conversationId: parsed.conversationId,
+          userId: parsed.userId,
+          lastReadAt: parsed.lastReadAt,
+        }),
+      );
     }
   });
 
@@ -150,6 +184,22 @@ export async function createWsServer(port: number) {
       if (frame.type === "leave") {
         state.rooms.delete(frame.conversationId);
         rooms.get(frame.conversationId)?.delete(socket);
+        return;
+      }
+
+      if (frame.type === "typing") {
+        // Ефемерний стан — не пишемо в БД (DATABASE.md), лише ретрансляція
+        // іншим сокетам у кімнаті. Довіряємо join-перевірці учасника вище.
+        if (!state.rooms.has(frame.conversationId)) return;
+        broadcast(
+          frame.conversationId,
+          JSON.stringify({
+            type: "typing",
+            conversationId: frame.conversationId,
+            userId: state.userId,
+          }),
+          socket,
+        );
       }
     });
 
