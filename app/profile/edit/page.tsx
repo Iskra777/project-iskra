@@ -10,12 +10,26 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { useSession } from "@/lib/auth/session-context";
 import { useToast } from "@/components/ui/toast";
 
 const ERROR_MESSAGES: Record<string, string> = {
   validation_error: "Перевірте правильність введених даних.",
   invalid_token: "Сесія недійсна. Увійдіть знову.",
+};
+
+const DELETE_ERROR_MESSAGES: Record<string, string> = {
+  invalid_token: "Сесія недійсна. Увійдіть знову.",
+  validation_error: "Введіть пароль.",
+  invalid_credentials: "Невірний пароль.",
 };
 
 // Дзеркалить ліміти app/api/users/me/avatar/route.ts — щоб не ганяти явно
@@ -37,7 +51,7 @@ function toNullableValue(value: string): string | null {
 }
 
 export default function EditProfilePage() {
-  const { user, accessToken, isLoading, updateUser } = useSession();
+  const { user, accessToken, isLoading, updateUser, logout } = useSession();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -58,6 +72,10 @@ export default function EditProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | undefined>();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | undefined>();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (isLoading) {
     return (
@@ -196,6 +214,40 @@ export default function EditProfilePage() {
     }
   }
 
+  async function handleDeleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeleteError(undefined);
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch("/api/users/me", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        const code = data?.error?.code as string | undefined;
+        setDeleteError(
+          (code && DELETE_ERROR_MESSAGES[code]) ??
+            "Щось пішло не так. Спробуйте ще раз.",
+        );
+        return;
+      }
+
+      await logout();
+      router.push("/");
+    } catch {
+      setDeleteError("Немає з'єднання із сервером. Спробуйте ще раз.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
       <Card className="w-full max-w-sm">
@@ -271,6 +323,64 @@ export default function EditProfilePage() {
             </Link>
           </div>
         </form>
+      </Card>
+
+      <Card className="mt-4 w-full max-w-sm border border-danger/30">
+        <CardTitle className="text-danger">Небезпечна зона</CardTitle>
+        <CardDescription className="mb-4">
+          Видалення акаунта деактивує його одразу і завершує всі активні сесії.
+          Відновлення — лише через звернення в підтримку.
+        </CardDescription>
+        <Dialog
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletePassword("");
+              setDeleteError(undefined);
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button variant="danger" className="w-full">
+              Видалити акаунт
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogTitle>Видалити акаунт?</DialogTitle>
+            <DialogDescription className="mb-4">
+              Введіть пароль, щоб підтвердити. Цю дію не можна скасувати
+              самостійно.
+            </DialogDescription>
+            <form
+              onSubmit={handleDeleteAccount}
+              className="flex flex-col gap-4"
+              noValidate
+            >
+              <Input
+                label="Пароль"
+                type="password"
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+                error={deleteError}
+                autoComplete="current-password"
+              />
+              <div className="flex gap-3">
+                <Button
+                  type="submit"
+                  variant="danger"
+                  disabled={isDeleting}
+                  className="flex-1"
+                >
+                  {isDeleting ? "Видаляємо..." : "Так, видалити назавжди"}
+                </Button>
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary" className="flex-1">
+                    Скасувати
+                  </Button>
+                </DialogClose>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </Card>
     </div>
   );

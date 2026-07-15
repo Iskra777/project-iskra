@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/auth/current-user";
 import { updateProfileSchema } from "@/lib/profile-validation";
+import { deleteAccount } from "@/lib/auth/account-deletion";
+import { clearRefreshTokenCookie } from "@/lib/auth/cookies";
 
 export async function PATCH(request: Request) {
   const userId = await getUserIdFromRequest(request);
@@ -58,4 +60,56 @@ export async function PATCH(request: Request) {
       updatedAt: user.updatedAt,
     },
   });
+}
+
+export async function DELETE(request: Request) {
+  const userId = await getUserIdFromRequest(request);
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: { code: "invalid_token", message: "Не авторизовано." } },
+      { status: 401 },
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  const password = (body as { password?: unknown } | null)?.password;
+
+  if (typeof password !== "string" || password.length === 0) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Введіть пароль для підтвердження.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const existing = await prisma.user.findUnique({ where: { id: userId } });
+  if (!existing || existing.deletedAt || !existing.isActive) {
+    return NextResponse.json(
+      { error: { code: "invalid_token", message: "Не авторизовано." } },
+      { status: 401 },
+    );
+  }
+
+  const result = await deleteAccount(userId, password);
+
+  if (!result.ok) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_credentials",
+          message: "Невірний пароль.",
+        },
+      },
+      { status: 401 },
+    );
+  }
+
+  const response = NextResponse.json({ success: true });
+  clearRefreshTokenCookie(response);
+  return response;
 }

@@ -370,3 +370,37 @@ Rate limit — 3/год на email, 10/год на IP. Перевірка лім
 | `unsupported_file_type` | 400  | Байти файлу не відповідають PNG/JPEG/WEBP              |
 | `file_too_large`        | 413  | Файл більший за 5MB                                    |
 | `upload_failed`         | 502  | Cloudinary недоступний/відхилив заливку                |
+
+---
+
+## DELETE /api/users/me
+
+Видалення власного акаунта — Principle 5. Soft-delete (`User.deleted_at`), не hard-delete: `TODO` остаточне видалення через N днів не реалізовано, чекає на окреме продуктове/юридичне рішення ([ARCHITECTURE.md](ARCHITECTURE.md#свідомо-відкладені-рішення)).
+
+### Request
+
+```json
+{
+  "password": "string"
+}
+```
+
+Пароль — повторна автентифікація перед деструктивною дією; самого access-токена недостатньо (той самий принцип, що й у `POST /api/auth/reset-password`).
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+При успіху: `User.deletedAt` виставляється, усі активні `RefreshToken` користувача відкликаються, `Set-Cookie` чистить `refresh_token`, у `AuditLog` пишеться запис `account_deletion_requested`.
+
+### Помилки
+
+| code                  | HTTP | Коли                                                   |
+| --------------------- | ---- | ------------------------------------------------------ |
+| `invalid_token`       | 401  | `Authorization` відсутній/невалідний/акаунт неактивний |
+| `validation_error`    | 400  | Поле `password` відсутнє/порожнє                       |
+| `invalid_credentials` | 401  | Невірний пароль                                        |
