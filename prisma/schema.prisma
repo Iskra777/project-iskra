@@ -21,6 +21,12 @@ enum UserRole {
   admin
 }
 
+enum FriendshipStatus {
+  pending
+  accepted
+  blocked
+}
+
 /// DATABASE.md → User
 model User {
   id              String    @id @default(uuid()) @db.Uuid
@@ -44,6 +50,8 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   auditLogsAsUser         AuditLog[]                @relation("AuditLogUser")
   auditLogsAsActor        AuditLog[]                @relation("AuditLogActor")
+  friendshipsAsRequester  Friendship[]              @relation("FriendshipRequester")
+  friendshipsAsAddressee  Friendship[]              @relation("FriendshipAddressee")
 
   @@map("users")
 }
@@ -117,4 +125,22 @@ model AuditLog {
   actor User? @relation("AuditLogActor", fields: [actorId], references: [id])
 
   @@map("audit_logs")
+}
+
+/// DATABASE.md → Friendship. requester/addressee для `pending` — напрямок
+/// запиту; для `blocked` — requester = хто заблокував. Унікальність пари
+/// без урахування напрямку перевіряється в застосунку, не тут (DATABASE.md).
+model Friendship {
+  id           String           @id @default(uuid()) @db.Uuid
+  requesterId  String           @map("requester_id") @db.Uuid
+  addresseeId  String           @map("addressee_id") @db.Uuid
+  status       FriendshipStatus @default(pending)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  requester User @relation("FriendshipRequester", fields: [requesterId], references: [id])
+  addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+
+  @@unique([requesterId, addresseeId])
+  @@map("friendships")
 }
