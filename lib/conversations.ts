@@ -64,6 +64,126 @@ export function findParticipant(conversationId: string, userId: string) {
   });
 }
 
+/** Творець одразу `admin`, решта — `member` (DATABASE.md#conversation).
+ * Мінімум учасників (2 запрошених) перевіряє викликач (zod-схема
+ * ендпоінта) — тут лише сам факт створення. */
+export async function createGroupConversation(
+  creatorId: string,
+  title: string,
+  memberIds: string[],
+): Promise<{ conversationId: string }> {
+  const conversation = await prisma.conversation.create({
+    data: {
+      type: "group",
+      title,
+      participants: {
+        create: [
+          { userId: creatorId, role: "admin" },
+          ...memberIds.map((userId) => ({ userId, role: "member" as const })),
+        ],
+      },
+    },
+  });
+
+  return { conversationId: conversation.id };
+}
+
+export type GroupParticipantsErrorCode =
+  "not_found" | "not_a_group" | "forbidden";
+
+/**
+ * Лише `admin` групи може додавати учасників. Уже наявних учасників
+ * тихо пропускає (ідемпотентно) замість помилки — додавання когось,
+ * хто вже в групі, не мало б ламати весь запит.
+ */
+export async function addGroupParticipants(
+  conversationId: string,
+  actorId: string,
+  newUserIds: string[],
+): Promise<{ ok: true } | { ok: false; code: GroupParticipantsErrorCode }> {
+  const check = await checkGroupAdmin(conversationId, actorId);
+  if (!check.ok) return check;
+
+  const existing = await prisma.conversationParticipant.findMany({
+    where: { conversationId, userId: { in: newUserIds } },
+    select: { userId: true },
+  });
+  const existingIds = new Set(existing.map((p) => p.userId));
+  const toAdd = newUserIds.filter((id) => !existingIds.has(id));
+
+  if (toAdd.length > 0) {
+    await prisma.conversationParticipant.createMany({
+      data: toAdd.map((userId) => ({ conversationId, userId, role: "member" })),
+    });
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+  }
+
+  return { ok: true };
+}
+
+export type RemoveParticipantErrorCode =
+  GroupParticipantsErrorCode | "cannot_remove_self" | "not_participant";
+
+/**
+ * Лише `admin` може видаляти учасників, і не себе — вихід з групи це
+ * окрема майбутня задача плану ("вихід з групи і передача прав адміна"),
+ * не змішую з кік-логікою тут.
+ */
+export async function removeGroupParticipant(
+  conversationId: string,
+  actorId: string,
+  targetUserId: string,
+): Promise<{ ok: true } | { ok: false; code: RemoveParticipantErrorCode }> {
+  const check = await checkGroupAdmin(conversationId, actorId);
+  if (!check.ok) return check;
+
+  if (targetUserId === actorId) {
+    return { ok: false, code: "cannot_remove_self" };
+  }
+
+  const target = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId: targetUserId } },
+  });
+  if (!target) {
+    return { ok: false, code: "not_participant" };
+  }
+
+  await prisma.conversationParticipant.delete({ where: { id: target.id } });
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { updatedAt: new Date() },
+  });
+
+  return { ok: true };
+}
+
+async function checkGroupAdmin(
+  conversationId: string,
+  actorId: string,
+): Promise<{ ok: true } | { ok: false; code: GroupParticipantsErrorCode }> {
+  const actor = await findParticipant(conversationId, actorId);
+  if (!actor) {
+    return { ok: false, code: "not_found" };
+  }
+
+  const conversation = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    select: { type: true },
+  });
+  if (conversation.type !== "group") {
+    return { ok: false, code: "not_a_group" };
+  }
+
+  if (actor.role !== "admin") {
+    return { ok: false, code: "forbidden" };
+  }
+
+  return { ok: true };
+}
+
 export interface ParticipantSummary {
   id: string;
   username: string;
