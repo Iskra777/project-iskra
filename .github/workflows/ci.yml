@@ -27,6 +27,9 @@ jobs:
 
     env:
       DATABASE_URL: "postgresql://iskra:iskra_ci_password@localhost:5432/iskra_ci?schema=public"
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
