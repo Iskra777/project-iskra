@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -51,10 +53,15 @@ export async function POST(
   }
 
   const now = new Date();
+  const messageId = randomUUID();
+  // Пре-генеруємо id, щоб знати його заздалегідь для pg_notify нижче —
+  // Prisma все одно генерує uuid на клієнті, а не в БД (schema.prisma).
+  const notifyPayload = JSON.stringify({ conversationId, messageId });
 
   const [message] = await prisma.$transaction([
     prisma.message.create({
       data: {
+        id: messageId,
         conversationId,
         senderId: userId,
         content: parsed.data.content,
@@ -69,6 +76,9 @@ export async function POST(
       where: { id: participant.id },
       data: { lastReadAt: now },
     }),
+    // Postgres доставляє NOTIFY лише після коміту транзакції — якщо щось
+    // вище відкотиться, WS-сервер (server/ws-server.ts) нічого не отримає.
+    prisma.$executeRaw`SELECT pg_notify('new_message', ${notifyPayload})`,
   ]);
 
   return NextResponse.json(
