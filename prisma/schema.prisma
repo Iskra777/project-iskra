@@ -27,6 +27,16 @@ enum FriendshipStatus {
   blocked
 }
 
+enum ConversationType {
+  direct
+  group
+}
+
+enum ConversationRole {
+  admin
+  member
+}
+
 /// DATABASE.md → User
 model User {
   id              String    @id @default(uuid()) @db.Uuid
@@ -44,14 +54,15 @@ model User {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  refreshTokens           RefreshToken[]
-  emailVerificationTokens EmailVerificationToken[]
-  consentRecords          ConsentRecord[]
-  passwordResetTokens     PasswordResetToken[]
-  auditLogsAsUser         AuditLog[]                @relation("AuditLogUser")
-  auditLogsAsActor        AuditLog[]                @relation("AuditLogActor")
-  friendshipsAsRequester  Friendship[]              @relation("FriendshipRequester")
-  friendshipsAsAddressee  Friendship[]              @relation("FriendshipAddressee")
+  refreshTokens              RefreshToken[]
+  emailVerificationTokens    EmailVerificationToken[]
+  consentRecords             ConsentRecord[]
+  passwordResetTokens        PasswordResetToken[]
+  auditLogsAsUser            AuditLog[]                @relation("AuditLogUser")
+  auditLogsAsActor           AuditLog[]                @relation("AuditLogActor")
+  friendshipsAsRequester     Friendship[]              @relation("FriendshipRequester")
+  friendshipsAsAddressee     Friendship[]              @relation("FriendshipAddressee")
+  conversationParticipations ConversationParticipant[]
 
   @@map("users")
 }
@@ -131,16 +142,47 @@ model AuditLog {
 /// запиту; для `blocked` — requester = хто заблокував. Унікальність пари
 /// без урахування напрямку перевіряється в застосунку, не тут (DATABASE.md).
 model Friendship {
-  id           String           @id @default(uuid()) @db.Uuid
-  requesterId  String           @map("requester_id") @db.Uuid
-  addresseeId  String           @map("addressee_id") @db.Uuid
-  status       FriendshipStatus @default(pending)
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
+  id          String           @id @default(uuid()) @db.Uuid
+  requesterId String           @map("requester_id") @db.Uuid
+  addresseeId String           @map("addressee_id") @db.Uuid
+  status      FriendshipStatus @default(pending)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   requester User @relation("FriendshipRequester", fields: [requesterId], references: [id])
   addressee User @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
 
   @@unique([requesterId, addresseeId])
   @@map("friendships")
+}
+
+/// DATABASE.md → Conversation. Уникнення дублікатів `direct`-розмов
+/// перевіряється в застосунку (не тут) — див. DATABASE.md#conversation.
+model Conversation {
+  id        String           @id @default(uuid()) @db.Uuid
+  type      ConversationType
+  title     String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  participants ConversationParticipant[]
+
+  @@map("conversations")
+}
+
+/// DATABASE.md → ConversationParticipant. `lastReadAt` — механізм статусу
+/// прочитання (непрочитані = Message.sentAt > lastReadAt).
+model ConversationParticipant {
+  id             String           @id @default(uuid()) @db.Uuid
+  conversationId String           @map("conversation_id") @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  role           ConversationRole @default(member)
+  joinedAt       DateTime         @default(now()) @map("joined_at")
+  lastReadAt     DateTime?        @map("last_read_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
 }
