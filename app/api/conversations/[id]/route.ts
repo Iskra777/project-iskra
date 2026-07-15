@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/auth/current-user";
-import { findParticipant } from "@/lib/conversations";
+import { findParticipant, getConversationDetail } from "@/lib/conversations";
 
 export async function GET(
   request: Request,
@@ -27,35 +26,7 @@ export async function GET(
     );
   }
 
-  const conversation = await prisma.conversation.findUniqueOrThrow({
-    where: { id: conversationId },
-    include: {
-      participants: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const conversation = await getConversationDetail(conversationId, userId);
 
-  const otherParticipant =
-    conversation.type === "direct"
-      ? (conversation.participants.find((p) => p.userId !== userId)?.user ??
-        null)
-      : null;
-
-  return NextResponse.json({
-    conversation: {
-      id: conversation.id,
-      type: conversation.type,
-      otherParticipant,
-    },
-  });
+  return NextResponse.json({ conversation });
 }

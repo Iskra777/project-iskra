@@ -64,15 +64,40 @@ export function findParticipant(conversationId: string, userId: string) {
   });
 }
 
+export interface ParticipantSummary {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: string;
+}
+
+const participantSelect = {
+  role: true,
+  user: {
+    select: {
+      id: true,
+      username: true,
+      displayName: true,
+      avatarUrl: true,
+    },
+  },
+} as const;
+
+function toParticipantSummaries(
+  participants: { role: string; user: Omit<ParticipantSummary, "role"> }[],
+): ParticipantSummary[] {
+  return participants.map((p) => ({ ...p.user, role: p.role }));
+}
+
 export interface ConversationListItem {
   id: string;
   type: string;
-  otherParticipant: {
-    id: string;
-    username: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-  } | null;
+  title: string | null;
+  /** Лише для `direct` — "той самий" список у `participants`, зручний
+   * ярлик для найпоширенішого випадку (1:1 чат). `null` для `group`. */
+  otherParticipant: ParticipantSummary | null;
+  participants: ParticipantSummary[];
   lastMessage: {
     id: string;
     content: string;
@@ -85,8 +110,6 @@ export interface ConversationListItem {
 /**
  * Inbox для GET /api/conversations, відсортований за активністю
  * (Conversation.updatedAt, оновлюється при кожному новому повідомленні).
- * Лише `direct` розмови мають сенс для `otherParticipant` — групові чати
- * (наступна задача плану) розширять цю функцію пізніше.
  */
 export async function listConversations(
   userId: string,
@@ -97,18 +120,7 @@ export async function listConversations(
     include: {
       conversation: {
         include: {
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  displayName: true,
-                  avatarUrl: true,
-                },
-              },
-            },
-          },
+          participants: { select: participantSelect },
           messages: {
             where: { deletedAt: null },
             orderBy: { sentAt: "desc" },
@@ -121,10 +133,10 @@ export async function listConversations(
 
   return rows.map((row) => {
     const { conversation } = row;
+    const participants = toParticipantSummaries(conversation.participants);
     const otherParticipant =
       conversation.type === "direct"
-        ? (conversation.participants.find((p) => p.userId !== userId)?.user ??
-          null)
+        ? (participants.find((p) => p.id !== userId) ?? null)
         : null;
     const lastMessage = conversation.messages[0] ?? null;
     const unread =
@@ -135,7 +147,9 @@ export async function listConversations(
     return {
       id: conversation.id,
       type: conversation.type,
+      title: conversation.title,
       otherParticipant,
+      participants,
       lastMessage: lastMessage
         ? {
             id: lastMessage.id,
@@ -147,4 +161,38 @@ export async function listConversations(
       unread,
     };
   });
+}
+
+export interface ConversationDetail {
+  id: string;
+  type: string;
+  title: string | null;
+  otherParticipant: ParticipantSummary | null;
+  participants: ParticipantSummary[];
+}
+
+/** Метадані для GET /api/conversations/:id — заголовок екрана чату
+ * (з ким / яка група), незалежно від того, чи це `direct`, чи `group`. */
+export async function getConversationDetail(
+  conversationId: string,
+  userId: string,
+): Promise<ConversationDetail> {
+  const conversation = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    include: { participants: { select: participantSelect } },
+  });
+
+  const participants = toParticipantSummaries(conversation.participants);
+  const otherParticipant =
+    conversation.type === "direct"
+      ? (participants.find((p) => p.id !== userId) ?? null)
+      : null;
+
+  return {
+    id: conversation.id,
+    type: conversation.type,
+    title: conversation.title,
+    otherParticipant,
+    participants,
+  };
 }

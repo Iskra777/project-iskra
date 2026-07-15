@@ -178,6 +178,8 @@ describe("GET /api/conversations", () => {
     expect(body.conversations).toHaveLength(1);
     const conversation = body.conversations[0];
     expect(conversation.otherParticipant.username).toBe(`${PREFIX}bob`);
+    expect(conversation.title).toBeNull();
+    expect(conversation.participants).toHaveLength(2);
     expect(conversation.lastMessage.content).toBe("Привіт!");
     expect(conversation.unread).toBe(true);
   });

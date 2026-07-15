@@ -86,6 +86,13 @@ describe("GET /api/conversations/:id", () => {
     expect(response.status).toBe(200);
     expect(body.conversation.id).toBe(conversationId);
     expect(body.conversation.otherParticipant.username).toBe(`${PREFIX}bob`);
+    expect(body.conversation.title).toBeNull();
+    expect(body.conversation.participants).toHaveLength(2);
+    expect(
+      body.conversation.participants.every(
+        (p: { role: string }) => p.role === "member",
+      ),
+    ).toBe(true);
   });
 
   it("повертає 404 not_found для не-учасника", async () => {
