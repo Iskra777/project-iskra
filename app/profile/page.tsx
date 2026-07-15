@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { useSession } from "@/lib/auth/session-context";
 
 export default function ProfilePage() {
@@ -38,6 +39,12 @@ export default function ProfilePage() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
       <Card className="w-full max-w-sm">
+        <Avatar
+          src={user.avatarUrl}
+          alt={user.displayName ?? user.username}
+          size={80}
+          className="mb-4"
+        />
         <CardTitle>{user.displayName ?? user.username}</CardTitle>
         <CardDescription className="mb-6">@{user.username}</CardDescription>
 
@@ -64,13 +71,20 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <Button
-          variant="secondary"
-          className="mt-6 w-full"
-          onClick={() => logout()}
-        >
-          Вийти
-        </Button>
+        <div className="mt-6 flex gap-3">
+          <Link href="/profile/edit" className="flex-1">
+            <Button variant="secondary" className="w-full">
+              Редагувати профіль
+            </Button>
+          </Link>
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={() => logout()}
+          >
+            Вийти
+          </Button>
+        </div>
       </Card>
     </div>
   );

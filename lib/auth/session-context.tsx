@@ -33,6 +33,10 @@ interface SessionContextValue {
    * відновлення сесії при завантаженні, одна форма даних скрізь. */
   login: (accessToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Оновлює користувача в контексті без зайвого round-trip на /api/auth/me —
+   * для випадків, коли повний оновлений об'єкт уже прийшов у відповіді
+   * іншого ендпоінта (напр. PATCH /api/users/me). */
+  updateUser: (user: SessionUser) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -60,6 +64,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const { user: sessionUser } = await meResponse.json();
     setUser(sessionUser);
     setAccessToken(token);
+  }, []);
+
+  const updateUser = useCallback((updated: SessionUser) => {
+    setUser(updated);
   }, []);
 
   const logout = useCallback(async () => {
@@ -97,7 +105,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ user, accessToken, isLoading, login, logout }}
+      value={{ user, accessToken, isLoading, login, logout, updateUser }}
     >
       {children}
     </SessionContext.Provider>
