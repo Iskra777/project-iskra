@@ -55,3 +55,11 @@ export async function createDirectConversation(
 
   return { ok: true, conversationId: conversation.id, created: true };
 }
+
+/** Використовується і для надсилання, і для читання історії — той самий
+ * рядок потрібен в обох місцях (участь + lastReadAt). */
+export function findParticipant(conversationId: string, userId: string) {
+  return prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+  });
+}
