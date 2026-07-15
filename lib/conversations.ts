@@ -160,6 +160,96 @@ export async function removeGroupParticipant(
   return { ok: true };
 }
 
+export type TransferAdminErrorCode =
+  GroupParticipantsErrorCode | "not_participant";
+
+/** Призначає учасника додатковим `admin` — не забирає права в того, хто
+ * призначає (декілька admin одночасно дозволені, DATABASE.md#груповий-формат).
+ * Ідемпотентно: якщо ціль уже admin, просто нічого не робить. */
+export async function transferGroupAdmin(
+  conversationId: string,
+  actorId: string,
+  targetUserId: string,
+): Promise<{ ok: true } | { ok: false; code: TransferAdminErrorCode }> {
+  const check = await checkGroupAdmin(conversationId, actorId);
+  if (!check.ok) return check;
+
+  const target = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId: targetUserId } },
+  });
+  if (!target) {
+    return { ok: false, code: "not_participant" };
+  }
+
+  if (target.role !== "admin") {
+    await prisma.conversationParticipant.update({
+      where: { id: target.id },
+      data: { role: "admin" },
+    });
+  }
+
+  return { ok: true };
+}
+
+export type LeaveGroupErrorCode =
+  "not_found" | "not_a_group" | "admin_required" | "invalid_new_admin";
+
+/**
+ * Вихід із групи. Якщо той, хто виходить, — єдиний `admin`, і в групі
+ * лишаються інші учасники, вихід без `newAdminUserId` заборонено
+ * (`admin_required`) — свідомо не авто-призначаємо "наступного за
+ * joinedAt", щоб не було magic-вибору, якого ніхто не просив.
+ */
+export async function leaveGroup(
+  conversationId: string,
+  userId: string,
+  newAdminUserId?: string,
+): Promise<{ ok: true } | { ok: false; code: LeaveGroupErrorCode }> {
+  const participant = await findParticipant(conversationId, userId);
+  if (!participant) {
+    return { ok: false, code: "not_found" };
+  }
+
+  const conversation = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    select: { type: true },
+  });
+  if (conversation.type !== "group") {
+    return { ok: false, code: "not_a_group" };
+  }
+
+  const allParticipants = await prisma.conversationParticipant.findMany({
+    where: { conversationId },
+  });
+  const remaining = allParticipants.filter((p) => p.userId !== userId);
+  const isOnlyAdmin =
+    participant.role === "admin" && !remaining.some((p) => p.role === "admin");
+
+  if (isOnlyAdmin && remaining.length > 0) {
+    if (!newAdminUserId) {
+      return { ok: false, code: "admin_required" };
+    }
+    const target = remaining.find((p) => p.userId === newAdminUserId);
+    if (!target) {
+      return { ok: false, code: "invalid_new_admin" };
+    }
+    await prisma.conversationParticipant.update({
+      where: { id: target.id },
+      data: { role: "admin" },
+    });
+  }
+
+  await prisma.conversationParticipant.delete({
+    where: { id: participant.id },
+  });
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { updatedAt: new Date() },
+  });
+
+  return { ok: true };
+}
+
 async function checkGroupAdmin(
   conversationId: string,
   actorId: string,

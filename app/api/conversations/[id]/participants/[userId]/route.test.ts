@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { signAccessToken } from "@/lib/auth/tokens";
-import { DELETE } from "./route";
+import { DELETE, PATCH } from "./route";
 
 const PREFIX = "grp_r_";
 
@@ -21,6 +21,25 @@ function removeParticipant(
     new Request(
       `http://localhost/api/conversations/${conversationId}/participants/${targetUserId}`,
       { method: "DELETE", headers },
+    ),
+    { params: Promise.resolve({ id: conversationId, userId: targetUserId }) },
+  );
+}
+
+function promoteParticipant(
+  conversationId: string,
+  targetUserId: string,
+  body: unknown,
+  accessToken?: string,
+) {
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+  if (accessToken) {
+    headers.authorization = `Bearer ${accessToken}`;
+  }
+  return PATCH(
+    new Request(
+      `http://localhost/api/conversations/${conversationId}/participants/${targetUserId}`,
+      { method: "PATCH", headers, body: JSON.stringify(body) },
     ),
     { params: Promise.resolve({ id: conversationId, userId: targetUserId }) },
   );
@@ -163,6 +182,102 @@ describe("DELETE /api/conversations/:id/participants/:userId", () => {
 
   it("returns 401 without a token", async () => {
     const response = await removeParticipant(groupId, bobId);
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("invalid_token");
+  });
+});
+
+describe("PATCH /api/conversations/:id/participants/:userId", () => {
+  it("admin can promote another member to admin", async () => {
+    const token = await signAccessToken(aliceId);
+    const response = await promoteParticipant(
+      groupId,
+      bobId,
+      { role: "admin" },
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+
+    const bob = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId: groupId, userId: bobId },
+      },
+    });
+    expect(bob?.role).toBe("admin");
+
+    const alice = await prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId: groupId, userId: aliceId },
+      },
+    });
+    expect(alice?.role).toBe("admin");
+  });
+
+  it("returns 403 forbidden for a non-admin member", async () => {
+    const token = await signAccessToken(bobId);
+    const response = await promoteParticipant(
+      groupId,
+      bobId,
+      { role: "admin" },
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe("forbidden");
+  });
+
+  it("returns 404 not_participant for a target not in the group", async () => {
+    const token = await signAccessToken(aliceId);
+    const response = await promoteParticipant(
+      groupId,
+      carolId,
+      { role: "admin" },
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("not_participant");
+  });
+
+  it("returns 400 not_a_group for a direct conversation", async () => {
+    const token = await signAccessToken(aliceId);
+    const response = await promoteParticipant(
+      directId,
+      bobId,
+      { role: "admin" },
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("not_a_group");
+  });
+
+  it("returns 400 validation_error for an unsupported role value", async () => {
+    const token = await signAccessToken(aliceId);
+    const response = await promoteParticipant(
+      groupId,
+      bobId,
+      { role: "member" },
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("validation_error");
+  });
+
+  it("returns 401 without a token", async () => {
+    const response = await promoteParticipant(groupId, bobId, {
+      role: "admin",
+    });
     const body = await response.json();
 
     expect(response.status).toBe(401);
