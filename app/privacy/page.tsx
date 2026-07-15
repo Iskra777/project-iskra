@@ -2,7 +2,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-16">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-16 lg:max-w-3xl">
       <div>
         <h1 className="mb-2">Приватність</h1>
         <p className="text-sm text-foreground/60">

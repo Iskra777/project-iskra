@@ -98,7 +98,7 @@ export default function RegisterPage() {
   if (registered) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Перевірте пошту</CardTitle>
           <CardDescription>
             Ми надіслали лист із посиланням для підтвердження на {email}.
@@ -110,7 +110,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle>Реєстрація</CardTitle>
         <CardDescription className="mb-6">
           Створіть акаунт, щоб почати.

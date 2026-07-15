@@ -160,7 +160,7 @@ export default function PublicProfilePage() {
   if (status === "loading") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Завантажуємо...</CardTitle>
         </Card>
       </div>
@@ -170,7 +170,7 @@ export default function PublicProfilePage() {
   if (status === "not_found" || !profile) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Користувача не знайдено</CardTitle>
           <CardDescription>
             Такого профілю не існує, або він більше не доступний.
@@ -182,7 +182,7 @@ export default function PublicProfilePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <Avatar
           src={profile.avatarUrl}
           alt={profile.displayName ?? profile.username}

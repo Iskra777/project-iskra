@@ -82,7 +82,7 @@ export default function EditProfilePage() {
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Завантажуємо...</CardTitle>
         </Card>
       </div>
@@ -92,7 +92,7 @@ export default function EditProfilePage() {
   if (!user || !accessToken) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Потрібен вхід</CardTitle>
           <CardDescription className="mb-6">
             Щоб редагувати профіль, спершу увійдіть.
@@ -276,7 +276,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <div className="relative mb-4 w-fit">
           <Avatar
             src={avatarPreview ?? user.avatarUrl}
@@ -351,7 +351,7 @@ export default function EditProfilePage() {
         </form>
       </Card>
 
-      <Card className="mt-4 w-full max-w-sm">
+      <Card className="mt-4 w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle>Мої дані</CardTitle>
         <CardDescription className="mb-4">
           Завантажте копію даних, які Iskra зберігає про вас.
@@ -366,7 +366,7 @@ export default function EditProfilePage() {
         </Button>
       </Card>
 
-      <Card className="mt-4 w-full max-w-sm border border-danger/30">
+      <Card className="mt-4 w-full max-w-sm border border-danger/30 md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle className="text-danger">Небезпечна зона</CardTitle>
         <CardDescription className="mb-4">
           Видалення акаунта деактивує його одразу і завершує всі активні сесії.

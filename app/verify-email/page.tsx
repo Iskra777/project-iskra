@@ -49,7 +49,7 @@ function VerifyEmailContent() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm text-center">
+      <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
         {status === "loading" && (
           <>
             <CardTitle>Перевіряємо...</CardTitle>

@@ -61,7 +61,7 @@ export default function SearchPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         <CardTitle>Пошук користувачів</CardTitle>
         <CardDescription className="mb-6">
           Знайдіть інших учасників за іменем або username.

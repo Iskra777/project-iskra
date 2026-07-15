@@ -249,7 +249,7 @@ export default function GroupParticipantsPage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Потрібен вхід</CardTitle>
           <CardDescription className="mb-6">
             Щоб керувати учасниками, спершу увійдіть.
@@ -289,7 +289,7 @@ export default function GroupParticipantsPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         <div className="mb-2 flex items-center gap-3">
           <Link href={`/messages/${conversationId}`}>
             <Button variant="ghost" size="sm">

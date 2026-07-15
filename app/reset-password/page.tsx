@@ -66,7 +66,7 @@ function ResetPasswordContent() {
 
   if (success) {
     return (
-      <Card className="w-full max-w-sm text-center">
+      <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle>Пароль змінено</CardTitle>
         <CardDescription>
           Тепер можна{" "}
@@ -81,7 +81,7 @@ function ResetPasswordContent() {
 
   if (!token) {
     return (
-      <Card className="w-full max-w-sm text-center">
+      <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle>Не вдалося відкрити форму</CardTitle>
         <CardDescription>{formError}</CardDescription>
       </Card>
@@ -89,7 +89,7 @@ function ResetPasswordContent() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
       <CardTitle>Новий пароль</CardTitle>
       <CardDescription className="mb-6">
         Введіть новий пароль для акаунта.

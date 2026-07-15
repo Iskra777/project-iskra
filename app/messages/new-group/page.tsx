@@ -118,7 +118,7 @@ export default function NewGroupPage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Потрібен вхід</CardTitle>
           <CardDescription className="mb-6">
             Щоб створити групу, спершу увійдіть.
@@ -133,7 +133,7 @@ export default function NewGroupPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         <CardTitle>Нова група</CardTitle>
         <CardDescription className="mb-6">
           Назва й мінімум {MIN_INVITEES} учасники.

@@ -49,7 +49,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Основна навігація"
-      className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-sm items-center justify-around rounded-card border border-foreground/10 bg-card/90 px-2 py-2 shadow-lg backdrop-blur-sm"
+      className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-sm items-center justify-around rounded-card border border-foreground/10 bg-card/90 px-2 py-2 shadow-lg backdrop-blur-sm md:max-w-md xl:max-w-lg"
     >
       {TABS.map(({ href, label, icon: Icon, match }) => {
         const isActive = match(pathname);
@@ -59,11 +59,19 @@ export function BottomNav() {
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex flex-1 flex-col items-center gap-1 rounded-card px-2 py-1.5 text-foreground/50 transition-colors duration-150 hover:text-foreground",
+              "flex flex-1 flex-col items-center gap-1 px-1 py-1 text-foreground/50 transition-colors duration-200 hover:text-foreground",
               isActive && "text-primary",
             )}
           >
-            <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} />
+            <span
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-[12px] border border-transparent transition-all duration-200",
+                isActive &&
+                  "border-primary/40 bg-primary/10 shadow-lg shadow-primary/50",
+              )}
+            >
+              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} />
+            </span>
             <span className="text-[11px] leading-none">{label}</span>
           </Link>
         );

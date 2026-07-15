@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
   if (submitted) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Перевірте пошту</CardTitle>
           <CardDescription>
             Якщо акаунт з таким email існує, ми надіслали посилання для скидання
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <CardTitle>Забули пароль?</CardTitle>
         <CardDescription className="mb-6">
           Введіть email — надішлемо посилання для скидання пароля.

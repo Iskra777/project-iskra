@@ -331,7 +331,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="mx-auto flex w-full flex-1 flex-col md:max-w-2xl lg:max-w-3xl xl:max-w-4xl">
       <div className="flex items-center gap-3 border-b border-foreground/10 bg-card px-4 py-3">
         <Link href="/messages">
           <Button variant="ghost" size="sm">

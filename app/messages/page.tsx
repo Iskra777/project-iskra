@@ -74,7 +74,7 @@ export default function MessagesPage() {
   if (isSessionLoading || status === "loading") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Завантажуємо...</CardTitle>
         </Card>
       </div>
@@ -84,7 +84,7 @@ export default function MessagesPage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Потрібен вхід</CardTitle>
           <CardDescription className="mb-6">
             Щоб переглянути повідомлення, спершу увійдіть.
@@ -99,7 +99,7 @@ export default function MessagesPage() {
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
           <div>
             <CardTitle>Повідомлення</CardTitle>

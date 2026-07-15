@@ -13,7 +13,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Завантажуємо...</CardTitle>
         </Card>
       </div>
@@ -23,7 +23,7 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6">
-        <Card className="w-full max-w-sm text-center">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
           <CardTitle>Потрібен вхід</CardTitle>
           <CardDescription className="mb-6">
             Щоб переглянути профіль, спершу увійдіть.
@@ -38,7 +38,7 @@ export default function ProfilePage() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl">
         <Avatar
           src={user.avatarUrl}
           alt={user.displayName ?? user.username}

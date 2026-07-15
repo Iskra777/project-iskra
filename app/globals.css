@@ -6,8 +6,9 @@
   --foreground: #e7eaf0; /* TODO: точний відтінок тексту не зафіксовано в DESIGN_SYSTEM.md — практичний дефолт для читабельності */
   --card: #141a27;
 
-  /* DESIGN_SYSTEM.md → Colors. Крок 500 Tailwind CSS. */
-  --primary: #3b82f6;
+  /* DESIGN_SYSTEM.md → Colors. Крок 500 Tailwind CSS ("вогняна" гама — навмисно не
+     Electric Blue, замінено на прохання власника продукту). */
+  --primary: #f97316;
   --accent: #f59e0b;
   --danger: #ef4444;
   --success: #22c55e;
