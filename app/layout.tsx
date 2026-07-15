@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import { SessionProvider } from "@/lib/auth/session-context";
 import { Nav } from "@/components/nav";
+import { BottomNav } from "@/components/bottom-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,7 +35,8 @@ export default function RootLayout({
         <SessionProvider>
           <ToastProvider>
             <Nav />
-            {children}
+            <div className="flex flex-1 flex-col pb-24">{children}</div>
+            <BottomNav />
           </ToastProvider>
         </SessionProvider>
       </body>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth/session-context";
@@ -16,36 +17,14 @@ export function Nav() {
         </Link>
 
         {!isLoading && user && (
-          <nav className="flex min-w-0 items-center gap-1 overflow-x-auto">
-            <Link href="/profile" className="shrink-0">
-              <Button variant="ghost" size="sm">
-                Профіль
-              </Button>
-            </Link>
-            <Link href="/friends" className="shrink-0">
-              <Button variant="ghost" size="sm">
-                Друзі
-              </Button>
-            </Link>
-            <Link href="/messages" className="shrink-0">
-              <Button variant="ghost" size="sm">
-                Повідомлення
-              </Button>
-            </Link>
-            <Link href="/search" className="shrink-0">
-              <Button variant="ghost" size="sm">
-                Пошук
-              </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-              onClick={() => logout()}
-            >
-              Вийти
-            </Button>
-          </nav>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logout()}
+            aria-label="Вийти"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         )}
 
         {!isLoading && !user && (

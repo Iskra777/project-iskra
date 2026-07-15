@@ -1,0 +1,73 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Home, MessageCircle, Search, User, Users } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth/session-context";
+
+const TABS = [
+  {
+    href: "/",
+    label: "Головна",
+    icon: Home,
+    match: (path: string) => path === "/",
+  },
+  {
+    href: "/friends",
+    label: "Друзі",
+    icon: Users,
+    match: (path: string) => path.startsWith("/friends"),
+  },
+  {
+    href: "/messages",
+    label: "Повідомлення",
+    icon: MessageCircle,
+    match: (path: string) => path.startsWith("/messages"),
+  },
+  {
+    href: "/search",
+    label: "Пошук",
+    icon: Search,
+    match: (path: string) => path.startsWith("/search"),
+  },
+  {
+    href: "/profile",
+    label: "Профіль",
+    icon: User,
+    match: (path: string) => path.startsWith("/profile"),
+  },
+] as const;
+
+export function BottomNav() {
+  const { user, isLoading } = useSession();
+  const pathname = usePathname();
+
+  if (isLoading || !user) return null;
+
+  return (
+    <nav
+      aria-label="Основна навігація"
+      className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-sm items-center justify-around rounded-card border border-foreground/10 bg-card/90 px-2 py-2 shadow-lg backdrop-blur-sm"
+    >
+      {TABS.map(({ href, label, icon: Icon, match }) => {
+        const isActive = match(pathname);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-1 rounded-card px-2 py-1.5 text-foreground/50 transition-colors duration-150 hover:text-foreground",
+              isActive && "text-primary",
+            )}
+          >
+            <Icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} />
+            <span className="text-[11px] leading-none">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
