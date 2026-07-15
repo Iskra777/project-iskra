@@ -80,3 +80,85 @@ export async function respondToFriendRequest(
 
   return { ok: true };
 }
+
+export type RemoveFriendshipResult =
+  { ok: true } | { ok: false; code: "friendship_not_found" | "cannot_unblock" };
+
+/**
+ * Прибирає стосунок, у якому `userId` учасник (незалежно від напрямку).
+ * `pending`/`accepted` — видаляється завжди; `blocked` — лише якщо `userId`
+ * є блокувальником (`requesterId` рядка), інакше `cannot_unblock`.
+ */
+export async function removeFriendship(
+  userId: string,
+  otherUserId: string,
+): Promise<RemoveFriendshipResult> {
+  const existing = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { requesterId: userId, addresseeId: otherUserId },
+        { requesterId: otherUserId, addresseeId: userId },
+      ],
+    },
+  });
+
+  if (!existing) {
+    return { ok: false, code: "friendship_not_found" };
+  }
+
+  if (existing.status === "blocked" && existing.requesterId !== userId) {
+    return { ok: false, code: "cannot_unblock" };
+  }
+
+  await prisma.friendship.delete({ where: { id: existing.id } });
+
+  return { ok: true };
+}
+
+export type BlockUserResult =
+  { ok: true } | { ok: false; code: "cannot_block_self" | "already_blocked" };
+
+/** Блокує незалежно від поточного стану (немає рядка/pending/accepted) —
+ * блокувальник завжди стає requesterId, перезаписуючи попередній напрямок. */
+export async function blockUser(
+  blockerId: string,
+  blockedId: string,
+): Promise<BlockUserResult> {
+  if (blockerId === blockedId) {
+    return { ok: false, code: "cannot_block_self" };
+  }
+
+  const existing = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { requesterId: blockerId, addresseeId: blockedId },
+        { requesterId: blockedId, addresseeId: blockerId },
+      ],
+    },
+  });
+
+  if (existing?.status === "blocked") {
+    return { ok: false, code: "already_blocked" };
+  }
+
+  if (existing) {
+    await prisma.friendship.update({
+      where: { id: existing.id },
+      data: {
+        requesterId: blockerId,
+        addresseeId: blockedId,
+        status: "blocked",
+      },
+    });
+  } else {
+    await prisma.friendship.create({
+      data: {
+        requesterId: blockerId,
+        addresseeId: blockedId,
+        status: "blocked",
+      },
+    });
+  }
+
+  return { ok: true };
+}
