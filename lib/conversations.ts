@@ -330,7 +330,10 @@ export async function listConversations(
     include: {
       conversation: {
         include: {
-          participants: { select: participantSelect },
+          participants: {
+            select: participantSelect,
+            orderBy: { joinedAt: "asc" },
+          },
           messages: {
             where: { deletedAt: null },
             orderBy: { sentAt: "desc" },
@@ -389,7 +392,12 @@ export async function getConversationDetail(
 ): Promise<ConversationDetail> {
   const conversation = await prisma.conversation.findUniqueOrThrow({
     where: { id: conversationId },
-    include: { participants: { select: participantSelect } },
+    include: {
+      participants: {
+        select: participantSelect,
+        orderBy: { joinedAt: "asc" },
+      },
+    },
   });
 
   const participants = toParticipantSummaries(conversation.participants);

@@ -354,6 +354,16 @@ export default function ChatPage() {
             <div className="text-xs text-primary">набирає текст...</div>
           )}
         </div>
+        {isGroup && (
+          <Link
+            href={`/messages/${conversationId}/participants`}
+            className="ml-auto"
+          >
+            <Button variant="ghost" size="sm">
+              Учасники
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4">
