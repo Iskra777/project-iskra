@@ -1438,7 +1438,8 @@ Query: `?q=` (опційний, до 100 символів).
       "displayName": "string | null",
       "avatarUrl": "string | null"
     },
-    "community": { "id": "uuid", "name": "string" } | null
+    "community": { "id": "uuid", "name": "string" } | null,
+    "viewerReactions": ["fire" | "bulb" | "clap"]
   }
 }
 ```
@@ -1547,12 +1548,15 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
         "displayName": "string | null",
         "avatarUrl": "string | null"
       },
-      "community": { "id": "uuid", "name": "string" } | null
+      "community": { "id": "uuid", "name": "string" } | null,
+      "viewerReactions": ["fire" | "bulb" | "clap"]
     }
   ],
   "nextCursor": "uuid | null"
 }
 ```
+
+`viewerReactions` — типи, якими сам глядач уже відреагував на цей пост (`PUT/DELETE /api/posts/:id/reactions/:type`). Без чужих реакцій і без лічильника (PRINCIPLES.md, принцип 7).
 
 ### Помилки
 
@@ -1619,6 +1623,7 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
         "displayName": "string | null",
         "avatarUrl": "string | null"
       },
+      "viewerReactions": ["fire" | "bulb" | "clap"],
       "replies": [
         {
           "id": "uuid",
@@ -1630,7 +1635,8 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
             "username": "string",
             "displayName": "string | null",
             "avatarUrl": "string | null"
-          }
+          },
+          "viewerReactions": ["fire" | "bulb" | "clap"]
         }
       ]
     }
@@ -1744,3 +1750,35 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
 | `invalid_token` | 401  | `Authorization` відсутній/невалідний  |
 | `not_found`     | 404  | Коментар не існує або вже видалений   |
 | `forbidden`     | 403  | Коментар існує, але викликач не автор |
+
+---
+
+## PUT/DELETE /api/posts/:id/reactions/:type
+
+## PUT/DELETE /api/comments/:id/reactions/:type
+
+Поставити/зняти реакцію на пост чи коментар. `:type` — `fire`, `bulb` або `clap` (DATABASE.md#reaction → Рішення дизайну). Обидва ідемпотентні: повторний `PUT` тієї самої реакції чи `DELETE` неіснуючої — не помилка, просто без ефекту. Реакції не взаємовиключні — можна поставити кілька різних типів на один об'єкт.
+
+Видимість — та сама, що й коментування (`canViewPost`); для коментаря — видимість його поста.
+
+**Без лічильника у відповіді** — узгоджено з принципом 7 PRINCIPLES.md ("Не лайки. Не перегляди."). Відповідь фіксує лише факт дії, не кількість.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                          |
+| ------------------ | ---- | ------------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                          |
+| `validation_error` | 400  | `:type` не `fire`/`bulb`/`clap`                               |
+| `not_found`        | 404  | Пост/коментар не існує, видалений, або немає доступу до нього |

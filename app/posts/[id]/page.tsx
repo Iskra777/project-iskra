@@ -15,6 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { ReactionButtons } from "@/components/reaction-buttons";
+import type { ReactionType } from "@/components/reaction-buttons";
 import { useSession } from "@/lib/auth/session-context";
 import { useToast } from "@/components/ui/toast";
 
@@ -38,6 +40,7 @@ interface FeedPost {
   updatedAt: string;
   author: FeedAuthor;
   community: FeedCommunity | null;
+  viewerReactions: ReactionType[];
 }
 
 interface CommentReply {
@@ -45,6 +48,7 @@ interface CommentReply {
   content: string;
   createdAt: string;
   author: FeedAuthor;
+  viewerReactions: ReactionType[];
 }
 
 interface CommentWithReplies extends CommentReply {
@@ -219,6 +223,98 @@ export default function PostPage() {
     }
   }
 
+  async function handleTogglePostReaction(type: ReactionType) {
+    if (!accessToken || !post) return;
+    const isActive = post.viewerReactions.includes(type);
+
+    setPost((prev) =>
+      prev
+        ? {
+            ...prev,
+            viewerReactions: isActive
+              ? prev.viewerReactions.filter((t) => t !== type)
+              : [...prev.viewerReactions, type],
+          }
+        : prev,
+    );
+
+    const response = await fetch(`/api/posts/${postId}/reactions/${type}`, {
+      method: isActive ? "DELETE" : "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              viewerReactions: isActive
+                ? [...prev.viewerReactions, type]
+                : prev.viewerReactions.filter((t) => t !== type),
+            }
+          : prev,
+      );
+      toast({ title: "Не вдалося зберегти реакцію", variant: "danger" });
+    }
+  }
+
+  function updateCommentReactions(
+    commentId: string,
+    updater: (reactions: ReactionType[]) => ReactionType[],
+  ) {
+    setComments((prev) =>
+      prev.map((comment) => {
+        if (comment.id === commentId) {
+          return {
+            ...comment,
+            viewerReactions: updater(comment.viewerReactions),
+          };
+        }
+        return {
+          ...comment,
+          replies: comment.replies.map((reply) =>
+            reply.id === commentId
+              ? { ...reply, viewerReactions: updater(reply.viewerReactions) }
+              : reply,
+          ),
+        };
+      }),
+    );
+  }
+
+  async function handleToggleCommentReaction(
+    commentId: string,
+    type: ReactionType,
+  ) {
+    if (!accessToken) return;
+    const allComments = comments.flatMap((comment) => [
+      comment,
+      ...comment.replies,
+    ]);
+    const target = allComments.find((comment) => comment.id === commentId);
+    if (!target) return;
+    const isActive = target.viewerReactions.includes(type);
+
+    updateCommentReactions(commentId, (reactions) =>
+      isActive ? reactions.filter((t) => t !== type) : [...reactions, type],
+    );
+
+    const response = await fetch(
+      `/api/comments/${commentId}/reactions/${type}`,
+      {
+        method: isActive ? "DELETE" : "PUT",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      },
+    ).catch(() => null);
+
+    if (!response || !response.ok) {
+      updateCommentReactions(commentId, (reactions) =>
+        isActive ? [...reactions, type] : reactions.filter((t) => t !== type),
+      );
+      toast({ title: "Не вдалося зберегти реакцію", variant: "danger" });
+    }
+  }
+
   if (isSessionLoading) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -296,7 +392,11 @@ export default function PostPage() {
           <p className="mt-0.5 whitespace-pre-wrap text-sm">
             {comment.content}
           </p>
-          <div className="mt-1 flex gap-3">
+          <div className="mt-1 flex items-center gap-3">
+            <ReactionButtons
+              activeTypes={comment.viewerReactions}
+              onToggle={(type) => handleToggleCommentReaction(comment.id, type)}
+            />
             {!isReply && (
               <button
                 type="button"
@@ -383,6 +483,13 @@ export default function PostPage() {
             className="mt-4 max-h-[32rem] w-full rounded-card object-cover"
           />
         )}
+
+        <div className="mt-3">
+          <ReactionButtons
+            activeTypes={post.viewerReactions}
+            onToggle={handleTogglePostReaction}
+          />
+        </div>
       </Card>
 
       <Card className="mt-4 w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">

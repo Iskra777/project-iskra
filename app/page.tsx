@@ -15,6 +15,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { ReactionButtons } from "@/components/reaction-buttons";
+import type { ReactionType } from "@/components/reaction-buttons";
 import { useSession } from "@/lib/auth/session-context";
 import { useToast } from "@/components/ui/toast";
 
@@ -38,6 +40,7 @@ interface FeedPost {
   updatedAt: string;
   author: FeedAuthor;
   community: FeedCommunity | null;
+  viewerReactions: ReactionType[];
 }
 
 type Status = "loading" | "success" | "error";
@@ -184,6 +187,7 @@ export default function Home() {
           avatarUrl: user.avatarUrl,
         },
         community: null,
+        viewerReactions: [],
       };
       setPosts((prev) => [newPost, ...prev]);
       setContent("");
@@ -191,6 +195,48 @@ export default function Home() {
       toast({ title: "Пост опубліковано", variant: "success" });
     } finally {
       setIsPosting(false);
+    }
+  }
+
+  async function handleToggleReaction(postId: string, type: ReactionType) {
+    if (!accessToken) return;
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    const isActive = post.viewerReactions.includes(type);
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? {
+              ...p,
+              viewerReactions: isActive
+                ? p.viewerReactions.filter((t) => t !== type)
+                : [...p.viewerReactions, type],
+            }
+          : p,
+      ),
+    );
+
+    const response = await fetch(`/api/posts/${postId}/reactions/${type}`, {
+      method: isActive ? "DELETE" : "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      // відкат при помилці
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? {
+                ...p,
+                viewerReactions: isActive
+                  ? [...p.viewerReactions, type]
+                  : p.viewerReactions.filter((t) => t !== type),
+              }
+            : p,
+        ),
+      );
+      toast({ title: "Не вдалося зберегти реакцію", variant: "danger" });
     }
   }
 
@@ -373,6 +419,13 @@ export default function Home() {
                     className="mt-3 max-h-96 w-full rounded-card object-cover"
                   />
                 )}
+
+                <div className="mt-2">
+                  <ReactionButtons
+                    activeTypes={post.viewerReactions}
+                    onToggle={(type) => handleToggleReaction(post.id, type)}
+                  />
+                </div>
               </div>
             ))}
         </div>

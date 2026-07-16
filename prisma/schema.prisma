@@ -53,6 +53,12 @@ enum CommunityMemberStatus {
   approved
 }
 
+enum ReactionType {
+  fire
+  bulb
+  clap
+}
+
 /// DATABASE.md → User
 model User {
   id              String    @id @default(uuid()) @db.Uuid
@@ -84,6 +90,8 @@ model User {
   communityMemberships       CommunityMember[]
   posts                      Post[]                    @relation("PostAuthor")
   comments                   Comment[]                 @relation("CommentAuthor")
+  postReactions              PostReaction[]
+  commentReactions           CommentReaction[]
 
   @@map("users")
 }
@@ -276,9 +284,10 @@ model Post {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  author    User       @relation("PostAuthor", fields: [authorId], references: [id])
-  community Community? @relation(fields: [communityId], references: [id])
+  author    User           @relation("PostAuthor", fields: [authorId], references: [id])
+  community Community?     @relation(fields: [communityId], references: [id])
   comments  Comment[]
+  reactions PostReaction[]
 
   @@index([authorId])
   @@index([communityId])
@@ -301,12 +310,46 @@ model Comment {
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  post          Post      @relation(fields: [postId], references: [id])
-  author        User      @relation("CommentAuthor", fields: [authorId], references: [id])
-  parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
-  replies       Comment[] @relation("CommentReplies")
+  post          Post              @relation(fields: [postId], references: [id])
+  author        User              @relation("CommentAuthor", fields: [authorId], references: [id])
+  parentComment Comment?          @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies       Comment[]         @relation("CommentReplies")
+  reactions     CommentReaction[]
 
   @@index([postId])
   @@index([parentCommentId])
   @@map("comments")
+}
+
+/// DATABASE.md → Reaction. Окремі таблиці для Post/Comment (не поліморфний
+/// target_type+target_id) — Prisma не гарантує FK-цілісність для
+/// поліморфного зв'язку, а решта схеми послідовно використовує явні FK.
+/// Без публічного лічильника (PRINCIPLES.md, принцип 7) — ці рядки лише
+/// для стану "я відреагував", не для показу числа.
+model PostReaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  postId    String       @map("post_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId, type])
+  @@map("post_reactions")
+}
+
+model CommentReaction {
+  id        String       @id @default(uuid()) @db.Uuid
+  commentId String       @map("comment_id") @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  comment Comment @relation(fields: [commentId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId, type])
+  @@map("comment_reactions")
 }

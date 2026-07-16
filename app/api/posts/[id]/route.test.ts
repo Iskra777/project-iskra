@@ -359,6 +359,7 @@ describe("GET /api/posts/:id", () => {
   });
 
   afterEach(async () => {
+    await prisma.postReaction.deleteMany({ where: { postId: profilePostId } });
     await prisma.post.deleteMany({ where: { authorId } });
     const communityIds = [communityId, privateCommunityId];
     await prisma.communityMember.deleteMany({
@@ -382,6 +383,18 @@ describe("GET /api/posts/:id", () => {
 
     expect(response.status).toBe(200);
     expect(body.post.content).toBe("Profile post");
+  });
+
+  it("includes the viewer's own reactions, not counts", async () => {
+    await prisma.postReaction.create({
+      data: { postId: profilePostId, userId: authorId, type: "bulb" },
+    });
+    const token = await signAccessToken(authorId);
+    const response = await getPost(profilePostId, token);
+    const body = await response.json();
+
+    expect(body.post.viewerReactions).toEqual(["bulb"]);
+    expect(body.post.reactionCount).toBeUndefined();
   });
 
   it("an accepted friend can view the profile post", async () => {

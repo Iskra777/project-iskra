@@ -102,6 +102,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.postReaction.deleteMany({
+    where: { postId: { in: createdPostIds } },
+  });
   await prisma.post.deleteMany({ where: { id: { in: createdPostIds } } });
   const communityIds = [communityId, privateCommunityId];
   await prisma.communityMember.deleteMany({
@@ -139,6 +142,20 @@ describe("GET /api/feed", () => {
     expect(
       body.posts.some((p: { content: string }) => p.content === "My own post"),
     ).toBe(true);
+  });
+
+  it("includes the viewer's own reactions on each post, not counts", async () => {
+    const post = await makePost(viewerId, "React to me");
+    await prisma.postReaction.create({
+      data: { postId: post.id, userId: viewerId, type: "fire" },
+    });
+    const token = await signAccessToken(viewerId);
+    const response = await getFeed({}, token);
+    const body = await response.json();
+
+    const found = body.posts.find((p: { id: string }) => p.id === post.id);
+    expect(found.viewerReactions).toEqual(["fire"]);
+    expect(found.reactionCount).toBeUndefined();
   });
 
   it("includes an accepted friend's profile posts", async () => {

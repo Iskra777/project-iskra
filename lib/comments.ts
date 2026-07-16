@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { authorSelect, canViewPost } from "@/lib/feed";
 import type { FeedAuthor } from "@/lib/feed";
+import type { ReactionType } from "@/lib/reactions";
 
 export type CreateCommentErrorCode =
   "post_not_found" | "parent_not_found" | "nested_reply_not_allowed";
@@ -58,10 +59,32 @@ export interface CommentReply {
   createdAt: Date;
   updatedAt: Date;
   author: FeedAuthor;
+  viewerReactions: ReactionType[];
 }
 
 export interface CommentWithReplies extends CommentReply {
   replies: CommentReply[];
+}
+
+/** Один запит на весь список коментарів+відповідей (не N+1). */
+async function getViewerCommentReactions(
+  viewerId: string,
+  commentIds: string[],
+): Promise<Map<string, ReactionType[]>> {
+  if (commentIds.length === 0) return new Map();
+
+  const rows = await prisma.commentReaction.findMany({
+    where: { userId: viewerId, commentId: { in: commentIds } },
+    select: { commentId: true, type: true },
+  });
+
+  const map = new Map<string, ReactionType[]>();
+  for (const row of rows) {
+    const existing = map.get(row.commentId) ?? [];
+    existing.push(row.type);
+    map.set(row.commentId, existing);
+  }
+  return map;
 }
 
 export type ListCommentsErrorCode = "post_not_found";
@@ -104,6 +127,15 @@ export async function listComments(
     },
   });
 
+  const allCommentIds = topLevel.flatMap((comment) => [
+    comment.id,
+    ...comment.replies.map((reply) => reply.id),
+  ]);
+  const reactionsByCommentId = await getViewerCommentReactions(
+    viewerId,
+    allCommentIds,
+  );
+
   return {
     ok: true,
     comments: topLevel.map((comment) => ({
@@ -112,12 +144,14 @@ export async function listComments(
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
       author: comment.author,
+      viewerReactions: reactionsByCommentId.get(comment.id) ?? [],
       replies: comment.replies.map((reply) => ({
         id: reply.id,
         content: reply.content,
         createdAt: reply.createdAt,
         updatedAt: reply.updatedAt,
         author: reply.author,
+        viewerReactions: reactionsByCommentId.get(reply.id) ?? [],
       })),
     })),
   };

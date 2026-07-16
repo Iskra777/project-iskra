@@ -87,6 +87,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.commentReaction.deleteMany({
+    where: { comment: { postId: profilePostId } },
+  });
   await prisma.comment.deleteMany({ where: { postId: profilePostId } });
   await prisma.post.deleteMany({ where: { id: profilePostId } });
   await prisma.friendship.deleteMany({
@@ -276,6 +279,35 @@ describe("GET /api/posts/:id/comments", () => {
     expect(body.comments[0].replies[0].content).toBe("A reply");
     expect(body.comments[1].id).toBe(second.id);
     expect(body.comments[1].replies).toHaveLength(0);
+  });
+
+  it("includes the viewer's own reactions on comments and replies, not counts", async () => {
+    const token = await signAccessToken(authorId);
+    const topRes = await createCommentRequest(
+      profilePostId,
+      { content: "Top" },
+      token,
+    );
+    const top = (await topRes.json()).comment;
+    const replyRes = await createCommentRequest(
+      profilePostId,
+      { content: "Reply", parentCommentId: top.id },
+      token,
+    );
+    const reply = (await replyRes.json()).comment;
+    await prisma.commentReaction.create({
+      data: { commentId: top.id, userId: authorId, type: "clap" },
+    });
+    await prisma.commentReaction.create({
+      data: { commentId: reply.id, userId: authorId, type: "fire" },
+    });
+
+    const response = await getComments(profilePostId, token);
+    const body = await response.json();
+
+    expect(body.comments[0].viewerReactions).toEqual(["clap"]);
+    expect(body.comments[0].replies[0].viewerReactions).toEqual(["fire"]);
+    expect(body.comments[0].reactionCount).toBeUndefined();
   });
 
   it("omits a deleted top-level comment along with its replies", async () => {

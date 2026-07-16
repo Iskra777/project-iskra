@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { findMembership } from "@/lib/communities";
-import { authorSelect, canViewPost, communitySelect } from "@/lib/feed";
+import {
+  authorSelect,
+  canViewPost,
+  communitySelect,
+  getViewerPostReactions,
+} from "@/lib/feed";
 import type { FeedPost } from "@/lib/feed";
 
 export type CreatePostErrorCode = "community_not_found" | "forbidden";
@@ -78,6 +83,8 @@ export async function getPost(
     return { ok: false, code: "not_found" };
   }
 
+  const reactionsByPostId = await getViewerPostReactions(viewerId, [post.id]);
+
   return {
     ok: true,
     post: {
@@ -88,6 +95,7 @@ export async function getPost(
       updatedAt: post.updatedAt,
       author: post.author,
       community: post.community,
+      viewerReactions: reactionsByPostId.get(post.id) ?? [],
     },
   };
 }

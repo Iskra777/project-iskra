@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { ReactionType } from "@/lib/reactions";
 
 export interface FeedAuthor {
   id: string;
@@ -20,6 +21,30 @@ export interface FeedPost {
   updatedAt: Date;
   author: FeedAuthor;
   community: FeedCommunity | null;
+  /** Типи, якими сам глядач уже відреагував — не чужі реакції, без
+   * лічильника (PRINCIPLES.md, принцип 7). */
+  viewerReactions: ReactionType[];
+}
+
+/** Один запит на весь список постів (не N+1). */
+export async function getViewerPostReactions(
+  viewerId: string,
+  postIds: string[],
+): Promise<Map<string, ReactionType[]>> {
+  if (postIds.length === 0) return new Map();
+
+  const rows = await prisma.postReaction.findMany({
+    where: { userId: viewerId, postId: { in: postIds } },
+    select: { postId: true, type: true },
+  });
+
+  const map = new Map<string, ReactionType[]>();
+  for (const row of rows) {
+    const existing = map.get(row.postId) ?? [];
+    existing.push(row.type);
+    map.set(row.postId, existing);
+  }
+  return map;
 }
 
 export const authorSelect = {
@@ -153,6 +178,11 @@ export async function getFeed(
 
   const nextCursor = posts.length === limit ? posts[posts.length - 1].id : null;
 
+  const reactionsByPostId = await getViewerPostReactions(
+    viewerId,
+    posts.map((post) => post.id),
+  );
+
   return {
     ok: true,
     posts: posts.map((post) => ({
@@ -163,6 +193,7 @@ export async function getFeed(
       updatedAt: post.updatedAt,
       author: post.author,
       community: post.community,
+      viewerReactions: reactionsByPostId.get(post.id) ?? [],
     })),
     nextCursor,
   };
