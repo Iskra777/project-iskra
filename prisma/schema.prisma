@@ -37,6 +37,22 @@ enum ConversationRole {
   member
 }
 
+enum CommunityVisibility {
+  public
+  private
+}
+
+enum CommunityMemberRole {
+  admin
+  moderator
+  member
+}
+
+enum CommunityMemberStatus {
+  pending
+  approved
+}
+
 /// DATABASE.md → User
 model User {
   id              String    @id @default(uuid()) @db.Uuid
@@ -64,6 +80,8 @@ model User {
   friendshipsAsAddressee     Friendship[]              @relation("FriendshipAddressee")
   conversationParticipations ConversationParticipant[]
   sentMessages               Message[]
+  ownedCommunities           Community[]               @relation("CommunityOwner")
+  communityMemberships       CommunityMember[]
 
   @@map("users")
 }
@@ -204,4 +222,39 @@ model Message {
   sender       User         @relation(fields: [senderId], references: [id])
 
   @@map("messages")
+}
+
+/// DATABASE.md → Community. `ownerId` — окрема людина з правом видалити
+/// спільноту чи передати власність; `role: admin` (CommunityMember) може
+/// бути в декількох одночасно й керує повсякденням, але не видаляє.
+model Community {
+  id          String              @id @default(uuid()) @db.Uuid
+  ownerId     String              @map("owner_id") @db.Uuid
+  name        String              @unique
+  description String?
+  visibility  CommunityVisibility
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  owner   User              @relation("CommunityOwner", fields: [ownerId], references: [id])
+  members CommunityMember[]
+
+  @@map("communities")
+}
+
+/// DATABASE.md → CommunityMember. `status: pending` лише для заявок на
+/// вступ до `private` спільнот — `public` вступ одразу `approved`.
+model CommunityMember {
+  id          String                @id @default(uuid()) @db.Uuid
+  communityId String                @map("community_id") @db.Uuid
+  userId      String                @map("user_id") @db.Uuid
+  role        CommunityMemberRole   @default(member)
+  status      CommunityMemberStatus @default(pending)
+  joinedAt    DateTime              @default(now()) @map("joined_at")
+
+  community Community @relation(fields: [communityId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([communityId, userId])
+  @@map("community_members")
 }
