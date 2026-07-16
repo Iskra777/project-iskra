@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getUserIdFromRequest } from "@/lib/auth/current-user";
-import { createCommunity } from "@/lib/communities";
+import { createCommunity, listCommunities } from "@/lib/communities";
 
 const createCommunitySchema = z.object({
   name: z
@@ -13,6 +13,36 @@ const createCommunitySchema = z.object({
   description: z.string().trim().max(1000).nullable().optional(),
   visibility: z.enum(["public", "private"]),
 });
+
+// На відміну від пошуку користувачів (lib/search-validation.ts), тут
+// порожній `q` — легітимний "перегляд усіх" (обмежено LIST_LIMIT), не
+// помилка.
+const listQuerySchema = z.object({
+  q: z.string().trim().max(100).optional(),
+});
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const parsed = listQuerySchema.safeParse({
+    q: searchParams.get("q") ?? undefined,
+  });
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "validation_error",
+          message: "Пошуковий запит закороткий.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const communities = await listCommunities(parsed.data.q || null);
+
+  return NextResponse.json({ communities });
+}
 
 export async function POST(request: Request) {
   const userId = await getUserIdFromRequest(request);

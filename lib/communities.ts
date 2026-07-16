@@ -188,3 +188,241 @@ export async function respondToJoinRequest(
 
   return { ok: true };
 }
+
+export type ChangeMemberRoleErrorCode =
+  "not_found" | "forbidden" | "target_not_member" | "cannot_change_owner_role";
+
+/** Лише `admin` (approved) може змінювати ролі — на відміну від заявок на
+ * вступ, це чутливіша дія, тож `moderator` тут без прав. Роль власника не
+ * змінюється цим шляхом: вона синхронізована з `Community.ownerId` і
+ * міняється лише через передачу власності в {@link leaveCommunity}. */
+export async function changeMemberRole(
+  communityId: string,
+  actorId: string,
+  targetUserId: string,
+  newRole: "admin" | "moderator" | "member",
+): Promise<{ ok: true } | { ok: false; code: ChangeMemberRoleErrorCode }> {
+  const actor = await findMembership(communityId, actorId);
+  if (!actor || actor.status !== "approved") {
+    return { ok: false, code: "not_found" };
+  }
+
+  if (actor.role !== "admin") {
+    return { ok: false, code: "forbidden" };
+  }
+
+  const community = await prisma.community.findUniqueOrThrow({
+    where: { id: communityId },
+  });
+  if (community.ownerId === targetUserId) {
+    return { ok: false, code: "cannot_change_owner_role" };
+  }
+
+  const target = await findMembership(communityId, targetUserId);
+  if (!target || target.status !== "approved") {
+    return { ok: false, code: "target_not_member" };
+  }
+
+  if (target.role !== newRole) {
+    await prisma.communityMember.update({
+      where: { id: target.id },
+      data: { role: newRole },
+    });
+  }
+
+  return { ok: true };
+}
+
+export type RemoveMemberErrorCode =
+  | "not_found"
+  | "forbidden"
+  | "target_not_member"
+  | "cannot_remove_self"
+  | "cannot_remove_owner";
+
+/** `admin` видаляє будь-кого крім власника; `moderator` — лише `member`
+ * (не інших moderator/admin). Самовидалення заборонене навмисно — для
+ * цього є {@link leaveCommunity}, той самий підхід, що й у групових чатах
+ * (lib/conversations.ts#removeGroupParticipant). */
+export async function removeMember(
+  communityId: string,
+  actorId: string,
+  targetUserId: string,
+): Promise<{ ok: true } | { ok: false; code: RemoveMemberErrorCode }> {
+  const actor = await findMembership(communityId, actorId);
+  if (!actor || actor.status !== "approved") {
+    return { ok: false, code: "not_found" };
+  }
+
+  if (actor.role !== "admin" && actor.role !== "moderator") {
+    return { ok: false, code: "forbidden" };
+  }
+
+  if (targetUserId === actorId) {
+    return { ok: false, code: "cannot_remove_self" };
+  }
+
+  const community = await prisma.community.findUniqueOrThrow({
+    where: { id: communityId },
+  });
+  if (community.ownerId === targetUserId) {
+    return { ok: false, code: "cannot_remove_owner" };
+  }
+
+  const target = await findMembership(communityId, targetUserId);
+  if (!target || target.status !== "approved") {
+    return { ok: false, code: "target_not_member" };
+  }
+
+  if (actor.role === "moderator" && target.role !== "member") {
+    return { ok: false, code: "forbidden" };
+  }
+
+  await prisma.communityMember.delete({ where: { id: target.id } });
+  return { ok: true };
+}
+
+export interface CommunityMemberSummary {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: "admin" | "moderator" | "member";
+}
+
+const memberSelect = {
+  role: true,
+  user: {
+    select: { id: true, username: true, displayName: true, avatarUrl: true },
+  },
+} as const;
+
+function toMemberSummaries(
+  rows: {
+    role: "admin" | "moderator" | "member";
+    user: Omit<CommunityMemberSummary, "role">;
+  }[],
+): CommunityMemberSummary[] {
+  return rows.map((row) => ({ ...row.user, role: row.role }));
+}
+
+export interface CommunityDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: "public" | "private";
+  ownerId: string;
+  createdAt: Date;
+  memberCount: number;
+  /** `null` — приховано: `private`-спільнота, глядач не `approved`-учасник. */
+  members: CommunityMemberSummary[] | null;
+  viewerMembership: {
+    role: "admin" | "moderator" | "member";
+    status: "approved" | "pending";
+  } | null;
+  /** Заявки на вступ — заповнено лише для `admin`/`moderator`-глядача. */
+  pendingRequests: CommunityMemberSummary[] | null;
+}
+
+/**
+ * Деталі спільноти для GET /api/communities/:id. Спільнота видима всім
+ * (навіть `private`, навіть неавторизованим) — це узгоджено з рішенням у
+ * {@link joinCommunity}: подати заявку на вступ можна, лише знаючи, що
+ * спільнота існує. Але список учасників `private`-спільноти бачать лише її
+ * `approved`-учасники; заявки на розгляд — лише `admin`/`moderator`.
+ */
+export async function getCommunityDetail(
+  communityId: string,
+  viewerId: string | null,
+): Promise<CommunityDetail | null> {
+  const community = await prisma.community.findUnique({
+    where: { id: communityId },
+    include: {
+      members: {
+        where: { status: "approved" },
+        orderBy: { joinedAt: "asc" },
+        select: memberSelect,
+      },
+    },
+  });
+  if (!community) {
+    return null;
+  }
+
+  const viewerRow = viewerId
+    ? await findMembership(communityId, viewerId)
+    : null;
+  const viewerMembership = viewerRow
+    ? { role: viewerRow.role, status: viewerRow.status }
+    : null;
+
+  const canSeeMembers =
+    community.visibility === "public" ||
+    viewerMembership?.status === "approved";
+
+  const isModerator =
+    viewerMembership?.status === "approved" &&
+    (viewerMembership.role === "admin" ||
+      viewerMembership.role === "moderator");
+
+  let pendingRequests: CommunityMemberSummary[] | null = null;
+  if (isModerator) {
+    const pendingRows = await prisma.communityMember.findMany({
+      where: { communityId, status: "pending" },
+      orderBy: { joinedAt: "asc" },
+      select: memberSelect,
+    });
+    pendingRequests = toMemberSummaries(pendingRows);
+  }
+
+  return {
+    id: community.id,
+    name: community.name,
+    description: community.description,
+    visibility: community.visibility,
+    ownerId: community.ownerId,
+    createdAt: community.createdAt,
+    memberCount: community.members.length,
+    members: canSeeMembers ? toMemberSummaries(community.members) : null,
+    viewerMembership,
+    pendingRequests,
+  };
+}
+
+export interface CommunityListItem {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: "public" | "private";
+  memberCount: number;
+}
+
+const LIST_LIMIT = 20;
+
+/**
+ * Список/пошук для GET /api/communities. Порожній `query` — останні
+ * створені; непорожній — фільтр за назвою (case-insensitive), той самий
+ * підхід, що й у пошуку користувачів (lib/search-validation.ts). `private`-
+ * спільноти теж у списку — сама назва не прихована (узгоджено з рішенням
+ * у {@link joinCommunity}), лише вміст (учасники) прихований далі.
+ */
+export async function listCommunities(
+  query: string | null,
+): Promise<CommunityListItem[]> {
+  const communities = await prisma.community.findMany({
+    where: query ? { name: { contains: query, mode: "insensitive" } } : {},
+    take: LIST_LIMIT,
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { members: { where: { status: "approved" } } } },
+    },
+  });
+
+  return communities.map((community) => ({
+    id: community.id,
+    name: community.name,
+    description: community.description,
+    visibility: community.visibility,
+    memberCount: community._count.members,
+  }));
+}

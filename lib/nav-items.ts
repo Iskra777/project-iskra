@@ -1,4 +1,11 @@
-import { Home, MessageCircle, Search, User, Users } from "lucide-react";
+import {
+  Home,
+  MessageCircle,
+  Search,
+  User,
+  Users,
+  UsersRound,
+} from "lucide-react";
 
 export const NAV_ITEMS = [
   {
@@ -18,6 +25,12 @@ export const NAV_ITEMS = [
     label: "Повідомлення",
     icon: MessageCircle,
     match: (path: string) => path.startsWith("/messages"),
+  },
+  {
+    href: "/communities",
+    label: "Спільноти",
+    icon: UsersRound,
+    match: (path: string) => path.startsWith("/communities"),
   },
   {
     href: "/search",

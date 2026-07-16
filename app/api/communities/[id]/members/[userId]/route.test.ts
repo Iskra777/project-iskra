@@ -4,14 +4,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { signAccessToken } from "@/lib/auth/tokens";
-import { PATCH } from "./route";
+import { DELETE, PATCH } from "./route";
 
 const PREFIX = "comm_m_";
 
-function respond(
+function patchMember(
   communityId: string,
   targetUserId: string,
-  action: unknown,
+  body: unknown,
   accessToken?: string,
 ) {
   const headers: HeadersInit = { "Content-Type": "application/json" };
@@ -21,7 +21,43 @@ function respond(
   return PATCH(
     new Request(
       `http://localhost/api/communities/${communityId}/members/${targetUserId}`,
-      { method: "PATCH", headers, body: JSON.stringify({ action }) },
+      { method: "PATCH", headers, body: JSON.stringify(body) },
+    ),
+    { params: Promise.resolve({ id: communityId, userId: targetUserId }) },
+  );
+}
+
+function respond(
+  communityId: string,
+  targetUserId: string,
+  action: unknown,
+  accessToken?: string,
+) {
+  return patchMember(communityId, targetUserId, { action }, accessToken);
+}
+
+function changeRole(
+  communityId: string,
+  targetUserId: string,
+  role: unknown,
+  accessToken?: string,
+) {
+  return patchMember(communityId, targetUserId, { role }, accessToken);
+}
+
+function removeMember(
+  communityId: string,
+  targetUserId: string,
+  accessToken?: string,
+) {
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers.authorization = `Bearer ${accessToken}`;
+  }
+  return DELETE(
+    new Request(
+      `http://localhost/api/communities/${communityId}/members/${targetUserId}`,
+      { method: "DELETE", headers },
     ),
     { params: Promise.resolve({ id: communityId, userId: targetUserId }) },
   );
@@ -98,7 +134,7 @@ afterEach(async () => {
   });
 });
 
-describe("PATCH /api/communities/:id/members/:userId", () => {
+describe("PATCH /api/communities/:id/members/:userId (action)", () => {
   it("admin approves a pending request", async () => {
     const token = await signAccessToken(ownerId);
     const response = await respond(communityId, applicantId, "approve", token);
@@ -156,6 +192,163 @@ describe("PATCH /api/communities/:id/members/:userId", () => {
 
   it("returns 401 without a token", async () => {
     const response = await respond(communityId, applicantId, "approve");
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error.code).toBe("invalid_token");
+  });
+});
+
+describe("PATCH /api/communities/:id/members/:userId (role)", () => {
+  it("admin promotes a member to moderator", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await changeRole(
+      communityId,
+      memberId,
+      "moderator",
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+
+    const membership = await prisma.communityMember.findUnique({
+      where: { communityId_userId: { communityId, userId: memberId } },
+    });
+    expect(membership?.role).toBe("moderator");
+  });
+
+  it("admin demotes a moderator to member", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await changeRole(communityId, modId, "member", token);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+
+    const membership = await prisma.communityMember.findUnique({
+      where: { communityId_userId: { communityId, userId: modId } },
+    });
+    expect(membership?.role).toBe("member");
+  });
+
+  it("returns 403 forbidden when a moderator tries to change roles", async () => {
+    const token = await signAccessToken(modId);
+    const response = await changeRole(communityId, memberId, "admin", token);
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe("forbidden");
+  });
+
+  it("returns 400 cannot_change_owner_role for the owner", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await changeRole(communityId, ownerId, "member", token);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("cannot_change_owner_role");
+  });
+
+  it("returns 404 target_not_member for a pending applicant", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await changeRole(
+      communityId,
+      applicantId,
+      "moderator",
+      token,
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe("target_not_member");
+  });
+
+  it("returns 400 validation_error for an invalid role", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await changeRole(communityId, memberId, "overlord", token);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("validation_error");
+  });
+});
+
+describe("DELETE /api/communities/:id/members/:userId", () => {
+  it("admin removes a regular member", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await removeMember(communityId, memberId, token);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+
+    const membership = await prisma.communityMember.findUnique({
+      where: { communityId_userId: { communityId, userId: memberId } },
+    });
+    expect(membership).toBeNull();
+  });
+
+  it("moderator removes a regular member", async () => {
+    const token = await signAccessToken(modId);
+    const response = await removeMember(communityId, memberId, token);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+  });
+
+  it("returns 403 forbidden when a moderator tries to remove another moderator", async () => {
+    const otherMod = await prisma.user.create({
+      data: {
+        email: `${PREFIX}mod2@example.com`,
+        username: `${PREFIX}mod2`,
+        passwordHash: await hashPassword("correct horse battery staple"),
+      },
+    });
+    await prisma.communityMember.create({
+      data: {
+        communityId,
+        userId: otherMod.id,
+        role: "moderator",
+        status: "approved",
+      },
+    });
+
+    const token = await signAccessToken(modId);
+    const response = await removeMember(communityId, otherMod.id, token);
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error.code).toBe("forbidden");
+
+    await prisma.communityMember.deleteMany({
+      where: { communityId, userId: otherMod.id },
+    });
+    await prisma.user.delete({ where: { id: otherMod.id } });
+  });
+
+  it("returns 400 cannot_remove_self", async () => {
+    const token = await signAccessToken(ownerId);
+    const response = await removeMember(communityId, ownerId, token);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("cannot_remove_self");
+  });
+
+  it("returns 400 cannot_remove_owner", async () => {
+    const token = await signAccessToken(modId);
+    const response = await removeMember(communityId, ownerId, token);
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("cannot_remove_owner");
+  });
+
+  it("returns 401 without a token", async () => {
+    const response = await removeMember(communityId, memberId);
     const body = await response.json();
 
     expect(response.status).toBe(401);

@@ -4,7 +4,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth/password";
 import { signAccessToken } from "@/lib/auth/tokens";
-import { POST } from "./route";
+import { GET, POST } from "./route";
+
+function listCommunities(q?: string) {
+  const url = new URL("http://localhost/api/communities");
+  if (q !== undefined) {
+    url.searchParams.set("q", q);
+  }
+  return GET(new Request(url));
+}
 
 const PREFIX = "comm_create_";
 
@@ -152,5 +160,66 @@ describe("POST /api/communities", () => {
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe("invalid_token");
+  });
+});
+
+describe("GET /api/communities", () => {
+  it("lists communities without a token, most recent first", async () => {
+    const token = await signAccessToken(aliceId);
+    const first = await createCommunity(
+      { name: `${PREFIX}list_first`, visibility: "public" },
+      token,
+    );
+    const firstBody = await first.json();
+    createdCommunityIds.push(firstBody.community.id);
+
+    const second = await createCommunity(
+      { name: `${PREFIX}list_second`, visibility: "private" },
+      token,
+    );
+    const secondBody = await second.json();
+    createdCommunityIds.push(secondBody.community.id);
+
+    const response = await listCommunities();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    const names = body.communities.map((c: { name: string }) => c.name);
+    expect(names.indexOf(`${PREFIX}list_second`)).toBeLessThan(
+      names.indexOf(`${PREFIX}list_first`),
+    );
+    const listed = body.communities.find(
+      (c: { name: string }) => c.name === `${PREFIX}list_first`,
+    );
+    expect(listed.memberCount).toBe(1);
+    expect(listed.visibility).toBe("public");
+  });
+
+  it("filters by name (case-insensitive)", async () => {
+    const token = await signAccessToken(aliceId);
+    const response1 = await createCommunity(
+      { name: `${PREFIX}filterable`, visibility: "public" },
+      token,
+    );
+    const body1 = await response1.json();
+    createdCommunityIds.push(body1.community.id);
+
+    const response = await listCommunities("FILTERABLE");
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(
+      body.communities.some(
+        (c: { name: string }) => c.name === `${PREFIX}filterable`,
+      ),
+    ).toBe(true);
+  });
+
+  it("returns an empty list when nothing matches", async () => {
+    const response = await listCommunities("zzzz_no_such_community_zzzz");
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.communities).toEqual([]);
   });
 });
