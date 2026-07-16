@@ -1117,6 +1117,38 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 
 ---
 
+## GET /api/communities
+
+Список/пошук спільнот за назвою. Без авторизації. Порожній `q` — легітимний "перегляд усіх" (останні створені, ліміт 20), не помилка — на відміну від `GET /api/users/search`, де короткий запит не викликає бекенд узагалі (браузинг усієї таблиці користувачів не має сенсу; браузинг спільнот — має).
+
+### Request
+
+Query: `?q=` (опційний, до 100 символів).
+
+### Response 200
+
+```json
+{
+  "communities": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "description": "string | null",
+      "visibility": "public | private",
+      "memberCount": "number"
+    }
+  ]
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                       |
+| ------------------ | ---- | -------------------------- |
+| `validation_error` | 400  | `q` довший за 100 символів |
+
+---
+
 ## POST /api/communities
 
 Створює спільноту. Творець одразу отримує `CommunityMember(role=admin, status=approved)` (DATABASE.md#community → Рішення дизайну).
@@ -1150,6 +1182,40 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 | `invalid_token`    | 401  | `Authorization` відсутній/невалідний                                                          |
 | `validation_error` | 400  | `name` поза межами 3-50, `description` довший за 1000, або `visibility` не `public`/`private` |
 | `name_taken`       | 409  | Спільнота з такою назвою вже існує                                                            |
+
+---
+
+## GET /api/communities/:id
+
+Деталі спільноти для сторінки перегляду. Без авторизації — теж працює (як `GET /api/users/:username`), доступно й неавторизованим для `public`- і `private`-спільнот однаково (сама наявність спільноти не прихована, узгоджено з рішенням у `POST .../join`). Список учасників `private`-спільноти бачать лише її `approved`-учасники; `pendingRequests` заповнено лише для `admin`/`moderator`-глядача.
+
+### Request
+
+Без тіла. `Authorization` — опційний.
+
+### Response 200
+
+```json
+{
+  "community": {
+    "id": "uuid",
+    "name": "string",
+    "description": "string | null",
+    "visibility": "public | private",
+    "ownerId": "uuid",
+    "memberCount": "number",
+    "members": "[{ id, username, displayName, avatarUrl, role }] | null",
+    "viewerMembership": "{ role, status: approved|pending } | null",
+    "pendingRequests": "[{ id, username, displayName, avatarUrl, role }] | null"
+  }
+}
+```
+
+### Помилки
+
+| code        | HTTP | Коли               |
+| ----------- | ---- | ------------------ |
+| `not_found` | 404  | Спільнота не існує |
 
 ---
 
@@ -1215,9 +1281,13 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 
 ## PATCH /api/communities/:id/members/:userId
 
+Тіло — або `{ "action": ... }` (схвалення/відхилення заявки), або `{ "role": ... }` (зміна ролі). Рівно один з двох варіантів.
+
+### Варіант 1: схвалення/відхилення заявки
+
 Схвалення/відхилення заявки на вступ до приватної спільноти. Лише `admin`/`moderator`.
 
-### Request
+#### Request
 
 ```json
 {
@@ -1225,7 +1295,7 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 }
 ```
 
-### Response 200
+#### Response 200
 
 ```json
 {
@@ -1235,7 +1305,7 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 
 Відхилення видаляє `CommunityMember`-рядок повністю (той самий підхід, що й у запитах дружби — не позначаємо "rejected", просто прибираємо).
 
-### Помилки
+#### Помилки
 
 | code                 | HTTP | Коли                                                          |
 | -------------------- | ---- | ------------------------------------------------------------- |
@@ -1244,3 +1314,433 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 | `not_found`          | 404  | Викликач не `approved`-учасник цієї спільноти                 |
 | `forbidden`          | 403  | Викликач — учасник, але не `admin`/`moderator`                |
 | `no_pending_request` | 404  | `:userId` не має заявки зі статусом `pending` у цій спільноті |
+
+### Варіант 2: зміна ролі
+
+Зміна ролі учасника (`admin`/`moderator`/`member`). Лише `admin` — чутливіша дія, ніж розгляд заявок, тож `moderator` тут без прав. Роль власника (`Community.ownerId`) не міняється цим шляхом — лише через передачу власності в `DELETE .../leave`.
+
+#### Request
+
+```json
+{
+  "role": "admin | moderator | member"
+}
+```
+
+#### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+#### Помилки
+
+| code                       | HTTP | Коли                                           |
+| -------------------------- | ---- | ---------------------------------------------- |
+| `invalid_token`            | 401  | `Authorization` відсутній/невалідний           |
+| `validation_error`         | 400  | `role` не `"admin"`/`"moderator"`/`"member"`   |
+| `not_found`                | 404  | Викликач не `approved`-учасник цієї спільноти  |
+| `forbidden`                | 403  | Викликач — учасник, але не `admin`             |
+| `cannot_change_owner_role` | 400  | `:userId` — власник спільноти                  |
+| `target_not_member`        | 404  | `:userId` не `approved`-учасник цієї спільноти |
+
+---
+
+## DELETE /api/communities/:id/members/:userId
+
+Видалення учасника. `admin` може видалити будь-кого крім власника; `moderator` — лише `member` (не інших `moderator`/`admin`). Самовидалення заборонене — для цього є `DELETE .../leave` (той самий підхід, що й у групових чатах).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code                  | HTTP | Коли                                                                                |
+| --------------------- | ---- | ----------------------------------------------------------------------------------- |
+| `invalid_token`       | 401  | `Authorization` відсутній/невалідний                                                |
+| `not_found`           | 404  | Викликач не `approved`-учасник цієї спільноти                                       |
+| `forbidden`           | 403  | Викликач — не `admin`/`moderator`, або `moderator` намагається видалити не-`member` |
+| `target_not_member`   | 404  | `:userId` не `approved`-учасник цієї спільноти                                      |
+| `cannot_remove_self`  | 400  | `:userId` === викликач                                                              |
+| `cannot_remove_owner` | 400  | `:userId` — власник спільноти                                                       |
+
+---
+
+## POST /api/posts
+
+Створює пост. `communityId` відсутній/`null` — пост на профілі автора, завжди дозволено. Вказано — автор має бути `approved`-учасником цієї спільноти (той самий підхід, що й надсилання повідомлення в розмову — участь потрібна для дії).
+
+### Request
+
+```json
+{
+  "content": "string",
+  "communityId": "uuid | null",
+  "mediaUrl": "string | null"
+}
+```
+
+`content` — 1-5000 символів (той самий ліміт, що й повідомлення в чатах). `mediaUrl` — опційний, валідний URL (зазвичай отриманий з `POST /api/posts/media`, але ендпоінт не перевіряє, що URL саме звідти — так само, як і решта посилань у застосунку).
+
+### Response 201
+
+```json
+{
+  "post": {
+    "id": "uuid"
+  }
+}
+```
+
+### Помилки
+
+| code                  | HTTP | Коли                                                   |
+| --------------------- | ---- | ------------------------------------------------------ |
+| `invalid_token`       | 401  | `Authorization` відсутній/невалідний                   |
+| `validation_error`    | 400  | `content` порожній або довший за 5000 символів         |
+| `community_not_found` | 404  | `communityId` вказано, але така спільнота не існує     |
+| `forbidden`           | 403  | `communityId` вказано, але автор не `approved`-учасник |
+
+---
+
+## GET /api/posts/:id
+
+Одиночний перегляд поста (сторінка-permalink). Видимість — та сама, що й у стрічці (`GET /api/feed`): пряме посилання не обходить приватність. Пост на профілі — автору й `accepted`-друзям; пост у спільноті — `approved`-учасникам цієї спільноти, незалежно від дружби з автором. Немає доступу → та сама відповідь, що й "не існує" (anti-enumeration, як і приватні спільноти). Ендпоінт вимагає авторизації — анонімний перегляд у принципі неможливий за цими правилами.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "post": {
+    "id": "uuid",
+    "content": "string",
+    "mediaUrl": "string | null",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp",
+    "author": {
+      "id": "uuid",
+      "username": "string",
+      "displayName": "string | null",
+      "avatarUrl": "string | null"
+    },
+    "community": { "id": "uuid", "name": "string" } | null
+  }
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                                         |
+| --------------- | ---- | ------------------------------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний                         |
+| `not_found`     | 404  | Пост не існує, видалений, або глядач не має доступу до нього |
+
+---
+
+## PATCH /api/posts/:id
+
+Редагує пост. Лише автор — без модерації спільноти (адмін/модератор не може редагувати чужі пости, поза обсягом цієї задачі).
+
+### Request
+
+```json
+{
+  "content": "string",
+  "mediaUrl": "string | null"
+}
+```
+
+`mediaUrl` — опційний: поле відсутнє в тілі → зображення не чіпається; `null` → прибрати зображення без видалення всього поста; рядок → замінити на нове.
+
+### Response 200
+
+```json
+{
+  "post": {
+    "id": "uuid",
+    "content": "string",
+    "mediaUrl": "string | null",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                    |
+| ------------------ | ---- | ------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                    |
+| `validation_error` | 400  | `content` порожній або довший за 5000 символів          |
+| `not_found`        | 404  | Пост не існує або вже видалений (`deletedAt` заповнено) |
+| `forbidden`        | 403  | Пост існує, але викликач не автор                       |
+
+---
+
+## DELETE /api/posts/:id
+
+Видаляє пост. Лише автор. М'яке видалення (`deletedAt`), той самий підхід, що й `Message`/`User`.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+| `not_found`     | 404  | Пост не існує або вже видалений      |
+| `forbidden`     | 403  | Пост існує, але викликач не автор    |
+
+---
+
+## GET /api/feed
+
+Стрічка постів. Чисто хронологічне сортування (найновіші перші), без ранжування за engagement — лічильники реакцій/коментарів ще не існують (окремі майбутні задачі), додавати "розумний" алгоритм наперед не було сенсу.
+
+Видимі пости:
+
+- На профілі (`communityId = null`) — власні глядача + `accepted`-друзів.
+- У спільноті (`communityId` заповнено) — з будь-якої спільноти, де глядач сам `approved`-учасник, **незалежно від автора** (інакше приватна спільнота витікала б через дружбу з її учасником, якщо той автор — друг глядача, а сам глядач у спільноті не перебуває).
+
+### Request
+
+Query: `?before=<postId>&limit=` — курсорна пагінація, той самий підхід, що й історія повідомлень (`GET /api/conversations/:id/messages`). `limit` — 1-100, за замовчуванням 30.
+
+### Response 200
+
+```json
+{
+  "posts": [
+    {
+      "id": "uuid",
+      "content": "string",
+      "mediaUrl": "string | null",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp",
+      "author": {
+        "id": "uuid",
+        "username": "string",
+        "displayName": "string | null",
+        "avatarUrl": "string | null"
+      },
+      "community": { "id": "uuid", "name": "string" } | null
+    }
+  ],
+  "nextCursor": "uuid | null"
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                            |
+| ------------------ | ---- | --------------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                            |
+| `validation_error` | 400  | Невалідні параметри пагінації, або `before` не з видимих постів |
+
+---
+
+## POST /api/posts/media
+
+Завантажує зображення для поста, повертає URL. Незалежний від конкретного поста — той самий дворядковий підхід, що й `POST /api/users/me/avatar`: спершу заливка файлу, потім `mediaUrl` передається окремо в тіло `POST /api/posts` чи `PATCH /api/posts/:id`.
+
+На відміну від аватара (`public_id = userId`, `overwrite: true` — фіксований слот), тут кожне завантаження отримує свій унікальний `public_id` — людина може прикріпити різні зображення до різних постів. Заміна/видалення зображення поста не прибирає старий об'єкт з Cloudinary (відомий компроміс MVP).
+
+### Request
+
+`multipart/form-data`, поле `image`. Ліміт 5MB, PNG/JPEG/WEBP (перевірка реальних байтів файлу, не `Content-Type` від клієнта).
+
+### Response 200
+
+```json
+{
+  "mediaUrl": "string"
+}
+```
+
+### Помилки
+
+| code                    | HTTP | Коли                                 |
+| ----------------------- | ---- | ------------------------------------ |
+| `invalid_token`         | 401  | `Authorization` відсутній/невалідний |
+| `validation_error`      | 400  | Файл не надано                       |
+| `file_too_large`        | 413  | Файл більший за 5MB                  |
+| `unsupported_file_type` | 400  | Не PNG/JPEG/WEBP                     |
+| `upload_failed`         | 502  | Помилка на боці Cloudinary           |
+
+---
+
+## GET /api/posts/:id/comments
+
+Список коментарів під постом: топ-коментарі з вкладеними відповідями, хронологічно (найстаріші перші). Та сама видимість, що й коментування (`canViewPost`) — `404 not_found` за відсутності доступу.
+
+Видалені коментарі (і їхні відповіді) просто не показуються — спрощення обсягу, не плейсхолдер "[видалено]" зі збереженою гілкою (сама гілка в БД не видаляється, лише прихована зі списку).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "comments": [
+    {
+      "id": "uuid",
+      "content": "string",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp",
+      "author": {
+        "id": "uuid",
+        "username": "string",
+        "displayName": "string | null",
+        "avatarUrl": "string | null"
+      },
+      "replies": [
+        {
+          "id": "uuid",
+          "content": "string",
+          "createdAt": "timestamp",
+          "updatedAt": "timestamp",
+          "author": {
+            "id": "uuid",
+            "username": "string",
+            "displayName": "string | null",
+            "avatarUrl": "string | null"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Помилки
+
+| code             | HTTP | Коли                                                           |
+| ---------------- | ---- | -------------------------------------------------------------- |
+| `invalid_token`  | 401  | `Authorization` відсутній/невалідний                           |
+| `post_not_found` | 404  | Пост не існує, видалений, або викликач не має доступу до нього |
+
+---
+
+## POST /api/posts/:id/comments
+
+Додає коментар до поста. Хто бачить пост (та сама видимість, що й `GET /api/posts/:id` — друзі для профільного, `approved`-учасники для спільнотного), той і може коментувати; без окремої перевірки.
+
+Дворівневі треди (DATABASE.md#comment → Рішення дизайну): `parentCommentId` може вказувати лише на коментар верхнього рівня цього ж поста. Відповідь на відповідь — відхиляється, не сплющується мовчки.
+
+### Request
+
+```json
+{
+  "content": "string",
+  "parentCommentId": "uuid | null"
+}
+```
+
+`content` — 1-5000 символів (той самий ліміт, що й пости/повідомлення).
+
+### Response 201
+
+```json
+{
+  "comment": {
+    "id": "uuid"
+  }
+}
+```
+
+### Помилки
+
+| code                       | HTTP | Коли                                                                |
+| -------------------------- | ---- | ------------------------------------------------------------------- |
+| `invalid_token`            | 401  | `Authorization` відсутній/невалідний                                |
+| `validation_error`         | 400  | `content` порожній/довший за 5000, або `parentCommentId` не uuid    |
+| `post_not_found`           | 404  | Пост не існує, видалений, або викликач не має доступу до нього      |
+| `parent_not_found`         | 404  | `parentCommentId` вказано, але такого коментаря під цим постом нема |
+| `nested_reply_not_allowed` | 400  | `parentCommentId` вказує на коментар, який сам є відповіддю         |
+
+---
+
+## PATCH /api/comments/:id
+
+Редагує коментар. Лише автор — без модерації спільноти, той самий підхід, що й `PATCH /api/posts/:id`.
+
+### Request
+
+```json
+{
+  "content": "string"
+}
+```
+
+### Response 200
+
+```json
+{
+  "comment": {
+    "id": "uuid",
+    "content": "string",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                        |
+| ------------------ | ---- | ----------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                        |
+| `validation_error` | 400  | `content` порожній або довший за 5000 символів              |
+| `not_found`        | 404  | Коментар не існує або вже видалений (`deletedAt` заповнено) |
+| `forbidden`        | 403  | Коментар існує, але викликач не автор                       |
+
+---
+
+## DELETE /api/comments/:id
+
+Видаляє коментар. Лише автор. М'яке видалення (`deletedAt`). Відповіді на цей коментар не видаляються й не блокуються — гілка лишається, сам коментар показуватиметься як видалений (питання UI, не бекенду).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                  |
+| --------------- | ---- | ------------------------------------- |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний  |
+| `not_found`     | 404  | Коментар не існує або вже видалений   |
+| `forbidden`     | 403  | Коментар існує, але викликач не автор |

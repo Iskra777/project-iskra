@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
 
 cloudinary.config({
@@ -7,6 +9,7 @@ cloudinary.config({
 });
 
 const AVATAR_FOLDER = "avatars";
+const POST_IMAGE_FOLDER = "post-images";
 
 const SIGNATURES: { type: string; bytes: number[] }[] = [
   {
@@ -70,5 +73,36 @@ export function uploadAvatar(userId: string, buffer: Buffer): Promise<string> {
 export async function deleteAvatar(userId: string): Promise<void> {
   await cloudinary.uploader.destroy(`${AVATAR_FOLDER}/${userId}`, {
     resource_type: "image",
+  });
+}
+
+// public_id — випадковий на кожне завантаження (не userId, не postId):
+// одна людина може прикріпити різні зображення до різних постів, тож тут
+// нема "фіксованого слоту" для перезапису, як в аватара. Заміна/видалення
+// зображення поста не прибирає старий об'єкт з Cloudinary (відомий
+// компроміс MVP, не сирітське накопичення критичне за обсягом).
+export function uploadPostImage(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: POST_IMAGE_FOLDER,
+        public_id: randomUUID(),
+        resource_type: "image",
+        format: "webp",
+        transformation: [{ width: 1600, height: 1600, crop: "limit" }],
+      },
+      (error: unknown, result?: UploadApiResponse) => {
+        if (error || !result) {
+          reject(
+            error instanceof Error
+              ? error
+              : new Error("Cloudinary upload failed"),
+          );
+          return;
+        }
+        resolve(result.secure_url);
+      },
+    );
+    stream.end(buffer);
   });
 }

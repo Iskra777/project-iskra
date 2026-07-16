@@ -82,6 +82,8 @@ model User {
   sentMessages               Message[]
   ownedCommunities           Community[]               @relation("CommunityOwner")
   communityMemberships       CommunityMember[]
+  posts                      Post[]                    @relation("PostAuthor")
+  comments                   Comment[]                 @relation("CommentAuthor")
 
   @@map("users")
 }
@@ -238,6 +240,7 @@ model Community {
 
   owner   User              @relation("CommunityOwner", fields: [ownerId], references: [id])
   members CommunityMember[]
+  posts   Post[]
 
   @@map("communities")
 }
@@ -257,4 +260,53 @@ model CommunityMember {
 
   @@unique([communityId, userId])
   @@map("community_members")
+}
+
+/// DATABASE.md → Post. `communityId` null = пост на профілі автора,
+/// заповнено = пост у спільноті. `mediaUrl` — один опційний рядок
+/// (Cloudinary, той самий підхід, що й аватари); множинні зображення —
+/// поза обсягом цієї задачі.
+model Post {
+  id          String    @id @default(uuid()) @db.Uuid
+  authorId    String    @map("author_id") @db.Uuid
+  communityId String?   @map("community_id") @db.Uuid
+  content     String
+  mediaUrl    String?   @map("media_url")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  author    User       @relation("PostAuthor", fields: [authorId], references: [id])
+  community Community? @relation(fields: [communityId], references: [id])
+  comments  Comment[]
+
+  @@index([authorId])
+  @@index([communityId])
+  @@index([createdAt])
+  @@map("posts")
+}
+
+/// DATABASE.md → Comment. Дворівневі треди: `parentCommentId` вказує лише
+/// на коментар верхнього рівня (`parentCommentId = null`) — відповідь на
+/// відповідь заборонена на рівні застосунку (lib/comments.ts), не тут.
+/// Схема лишається self-reference-гнучкою на випадок глибших тредів
+/// пізніше, без нової міграції.
+model Comment {
+  id              String    @id @default(uuid()) @db.Uuid
+  postId          String    @map("post_id") @db.Uuid
+  authorId        String    @map("author_id") @db.Uuid
+  parentCommentId String?   @map("parent_comment_id") @db.Uuid
+  content         String
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  post          Post      @relation(fields: [postId], references: [id])
+  author        User      @relation("CommentAuthor", fields: [authorId], references: [id])
+  parentComment Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies       Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([parentCommentId])
+  @@map("comments")
 }
