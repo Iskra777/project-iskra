@@ -1119,7 +1119,7 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 
 ## POST /api/communities
 
-Створює спільноту. Творець одразу отримує `CommunityMember(role=admin, status=approved)` (DATABASE.md#community → Рішення дизайну). Вступ/вихід/модерація приватних спільнот — окремі майбутні задачі, тут лише створення.
+Створює спільноту. Творець одразу отримує `CommunityMember(role=admin, status=approved)` (DATABASE.md#community → Рішення дизайну).
 
 ### Request
 
@@ -1150,3 +1150,97 @@ ws://<host>:<WS_PORT>/?token=<access-токен>
 | `invalid_token`    | 401  | `Authorization` відсутній/невалідний                                                          |
 | `validation_error` | 400  | `name` поза межами 3-50, `description` довший за 1000, або `visibility` не `public`/`private` |
 | `name_taken`       | 409  | Спільнота з такою назвою вже існує                                                            |
+
+---
+
+## POST /api/communities/:id/join
+
+Вступ до спільноти. `public` — одразу `approved`. `private` — `pending`, чекає на схвалення `admin`/`moderator`. Заявку до приватної спільноти може подати будь-хто — сенс вступу саме в цьому, тому немає anti-enumeration приховування за видимістю, лише за фактом існування спільноти.
+
+### Request
+
+Без тіла.
+
+### Response 201
+
+```json
+{
+  "status": "approved | pending"
+}
+```
+
+### Помилки
+
+| code             | HTTP | Коли                                               |
+| ---------------- | ---- | -------------------------------------------------- |
+| `invalid_token`  | 401  | `Authorization` відсутній/невалідний               |
+| `not_found`      | 404  | Спільнота не існує                                 |
+| `already_member` | 409  | Уже є `CommunityMember`-рядок (будь-якого статусу) |
+
+---
+
+## DELETE /api/communities/:id/leave
+
+Вихід зі спільноти. Власник (`ownerId`) не може вийти без передачі прав — на відміну від групових чатів (де перевірка "останній admin"), тут єдина умова саме поле `ownerId`, бо `admin`-роль і без того може бути в декількох одночасно (DATABASE.md#community → Рішення дизайну).
+
+### Request
+
+```json
+{
+  "newOwnerId": "uuid"
+}
+```
+
+`newOwnerId` — опційний, обов'язковий лише коли виходить власник. Має бути вже `approved` учасником спільноти; отримує `admin`, якщо ще не мав цієї ролі.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code                | HTTP | Коли                                                              |
+| ------------------- | ---- | ----------------------------------------------------------------- |
+| `invalid_token`     | 401  | `Authorization` відсутній/невалідний                              |
+| `validation_error`  | 400  | `newOwnerId` не uuid                                              |
+| `not_found`         | 404  | Викликач не учасник цієї спільноти                                |
+| `owner_required`    | 400  | Виходить власник, а `newOwnerId` не вказано                       |
+| `invalid_new_owner` | 400  | `newOwnerId` вказано, але це не `approved` учасник цієї спільноти |
+
+---
+
+## PATCH /api/communities/:id/members/:userId
+
+Схвалення/відхилення заявки на вступ до приватної спільноти. Лише `admin`/`moderator`.
+
+### Request
+
+```json
+{
+  "action": "approve | reject"
+}
+```
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+Відхилення видаляє `CommunityMember`-рядок повністю (той самий підхід, що й у запитах дружби — не позначаємо "rejected", просто прибираємо).
+
+### Помилки
+
+| code                 | HTTP | Коли                                                          |
+| -------------------- | ---- | ------------------------------------------------------------- |
+| `invalid_token`      | 401  | `Authorization` відсутній/невалідний                          |
+| `validation_error`   | 400  | `action` не `"approve"`/`"reject"`                            |
+| `not_found`          | 404  | Викликач не `approved`-учасник цієї спільноти                 |
+| `forbidden`          | 403  | Викликач — учасник, але не `admin`/`moderator`                |
+| `no_pending_request` | 404  | `:userId` не має заявки зі статусом `pending` у цій спільноті |
