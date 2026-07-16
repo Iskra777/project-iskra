@@ -10,7 +10,7 @@ export function Nav() {
   const { user, isLoading, logout } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-foreground/10 bg-card">
+    <header className="sticky top-0 z-30 border-b border-foreground/10 bg-card lg:pl-56">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between gap-2 px-6">
         <Link
           href="/"

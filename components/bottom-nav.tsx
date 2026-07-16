@@ -2,43 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MessageCircle, Search, User, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/auth/session-context";
-
-const TABS = [
-  {
-    href: "/",
-    label: "Головна",
-    icon: Home,
-    match: (path: string) => path === "/",
-  },
-  {
-    href: "/friends",
-    label: "Друзі",
-    icon: Users,
-    match: (path: string) => path.startsWith("/friends"),
-  },
-  {
-    href: "/messages",
-    label: "Повідомлення",
-    icon: MessageCircle,
-    match: (path: string) => path.startsWith("/messages"),
-  },
-  {
-    href: "/search",
-    label: "Пошук",
-    icon: Search,
-    match: (path: string) => path.startsWith("/search"),
-  },
-  {
-    href: "/profile",
-    label: "Профіль",
-    icon: User,
-    match: (path: string) => path.startsWith("/profile"),
-  },
-] as const;
+import { NAV_ITEMS } from "@/lib/nav-items";
 
 export function BottomNav() {
   const { user, isLoading } = useSession();
@@ -49,9 +16,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Основна навігація"
-      className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-sm items-center justify-around rounded-card border border-foreground/10 bg-card/90 px-2 py-2 shadow-lg backdrop-blur-sm md:max-w-md xl:max-w-lg"
+      className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-sm items-center justify-around rounded-card border border-foreground/10 bg-card/90 px-2 py-2 shadow-lg backdrop-blur-sm md:max-w-md xl:max-w-lg lg:hidden"
     >
-      {TABS.map(({ href, label, icon: Icon, match }) => {
+      {NAV_ITEMS.map(({ href, label, icon: Icon, match }) => {
         const isActive = match(pathname);
         return (
           <Link
