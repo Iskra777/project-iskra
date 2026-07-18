@@ -4,6 +4,7 @@ import {
   authorSelect,
   canViewPost,
   communitySelect,
+  getViewerBookmarkedPostIds,
   getViewerPostReactions,
 } from "@/lib/feed";
 import type { FeedPost } from "@/lib/feed";
@@ -83,7 +84,10 @@ export async function getPost(
     return { ok: false, code: "not_found" };
   }
 
-  const reactionsByPostId = await getViewerPostReactions(viewerId, [post.id]);
+  const [reactionsByPostId, bookmarkedPostIds] = await Promise.all([
+    getViewerPostReactions(viewerId, [post.id]),
+    getViewerBookmarkedPostIds(viewerId, [post.id]),
+  ]);
 
   return {
     ok: true,
@@ -96,6 +100,7 @@ export async function getPost(
       author: post.author,
       community: post.community,
       viewerReactions: reactionsByPostId.get(post.id) ?? [],
+      viewerHasBookmarked: bookmarkedPostIds.has(post.id),
     },
   };
 }

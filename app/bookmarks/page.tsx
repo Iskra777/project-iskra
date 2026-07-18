@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Zap } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { ReactionButtons } from "@/components/reaction-buttons";
 import type { ReactionType } from "@/components/reaction-buttons";
 import { BookmarkButton } from "@/components/bookmark-button";
@@ -55,41 +53,21 @@ function formatTimestamp(createdAt: string) {
     : date.toLocaleDateString("uk-UA");
 }
 
-function LoggedOutHero() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="flex items-center gap-2 text-foreground">
-        Iskra
-        <Zap className="h-8 w-8 fill-accent text-accent" />
-      </h1>
-      <p className="max-w-md text-foreground/70 md:max-w-lg md:text-lg">
-        One Spark Can Change Everything.
-      </p>
-    </div>
-  );
-}
-
-export default function Home() {
+export default function BookmarksPage() {
   const { user, accessToken, isLoading: isSessionLoading } = useSession();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] = useState<Status>("loading");
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const [content, setContent] = useState("");
-  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [isPosting, setIsPosting] = useState(false);
-
   const [postToDelete, setPostToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const loadFeed = useCallback(() => {
+  const loadBookmarks = useCallback(() => {
     if (!accessToken) return;
-    return fetch("/api/feed", {
+    return fetch("/api/bookmarks", {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
       .then(async (response) => {
@@ -109,14 +87,14 @@ export default function Home() {
 
   useEffect(() => {
     if (isSessionLoading || !user) return;
-    loadFeed();
-  }, [isSessionLoading, user, loadFeed]);
+    loadBookmarks();
+  }, [isSessionLoading, user, loadBookmarks]);
 
   async function handleLoadMore() {
     if (!nextCursor || !accessToken || isLoadingMore) return;
     setIsLoadingMore(true);
     try {
-      const response = await fetch(`/api/feed?before=${nextCursor}`, {
+      const response = await fetch(`/api/bookmarks?before=${nextCursor}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!response.ok) return;
@@ -125,79 +103,6 @@ export default function Home() {
       setNextCursor(body.nextCursor);
     } finally {
       setIsLoadingMore(false);
-    }
-  }
-
-  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !accessToken) return;
-
-    setIsUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.set("image", file);
-      const response = await fetch("/api/posts/media", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-        body: formData,
-      });
-      if (!response.ok) {
-        toast({
-          title: "Не вдалося завантажити зображення",
-          variant: "danger",
-        });
-        return;
-      }
-      const body = await response.json();
-      setMediaUrl(body.mediaUrl);
-    } finally {
-      setIsUploadingImage(false);
-    }
-  }
-
-  async function handlePublish() {
-    if (!accessToken || !user || content.trim().length === 0 || isPosting) {
-      return;
-    }
-    setIsPosting(true);
-    try {
-      const response = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ content: content.trim(), mediaUrl }),
-      });
-      if (!response.ok) {
-        toast({ title: "Не вдалося опублікувати пост", variant: "danger" });
-        return;
-      }
-      const body = await response.json();
-      const now = new Date().toISOString();
-      const newPost: FeedPost = {
-        id: body.post.id,
-        content: content.trim(),
-        mediaUrl,
-        createdAt: now,
-        updatedAt: now,
-        author: {
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl,
-        },
-        community: null,
-        viewerReactions: [],
-        viewerHasBookmarked: false,
-      };
-      setPosts((prev) => [newPost, ...prev]);
-      setContent("");
-      setMediaUrl(null);
-      toast({ title: "Пост опубліковано", variant: "success" });
-    } finally {
-      setIsPosting(false);
     }
   }
 
@@ -226,7 +131,6 @@ export default function Home() {
     }).catch(() => null);
 
     if (!response || !response.ok) {
-      // відкат при помилці
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
@@ -243,30 +147,28 @@ export default function Home() {
     }
   }
 
-  async function handleToggleBookmark(postId: string) {
+  /** На відміну від стрічки: зняття закладки прибирає пост зі списку одразу
+   * (це екран "збережене", а не перемикач видимості). */
+  async function handleRemoveBookmark(postId: string) {
     if (!accessToken) return;
-    const post = posts.find((p) => p.id === postId);
-    if (!post) return;
-    const wasBookmarked = post.viewerHasBookmarked;
+    const index = posts.findIndex((p) => p.id === postId);
+    if (index === -1) return;
+    const removedPost = posts[index];
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId ? { ...p, viewerHasBookmarked: !wasBookmarked } : p,
-      ),
-    );
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
 
     const response = await fetch(`/api/posts/${postId}/bookmark`, {
-      method: wasBookmarked ? "DELETE" : "PUT",
+      method: "DELETE",
       headers: { Authorization: `Bearer ${accessToken}` },
     }).catch(() => null);
 
     if (!response || !response.ok) {
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId ? { ...p, viewerHasBookmarked: wasBookmarked } : p,
-        ),
-      );
-      toast({ title: "Не вдалося зберегти закладку", variant: "danger" });
+      setPosts((prev) => {
+        const next = [...prev];
+        next.splice(index, 0, removedPost);
+        return next;
+      });
+      toast({ title: "Не вдалося прибрати закладку", variant: "danger" });
     }
   }
 
@@ -299,69 +201,28 @@ export default function Home() {
   }
 
   if (!user) {
-    return <LoggedOutHero />;
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-6">
+        <Card className="w-full max-w-sm text-center md:max-w-md lg:max-w-lg xl:max-w-xl">
+          <CardTitle>Потрібен вхід</CardTitle>
+          <CardDescription className="mb-6">
+            Щоб переглянути закладки, спершу увійдіть.
+          </CardDescription>
+          <Link href="/login">
+            <Button className="w-full">Увійти</Button>
+          </Link>
+        </Card>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-12">
       <Card className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
-        <CardTitle>Стрічка</CardTitle>
+        <CardTitle>Мої закладки</CardTitle>
         <CardDescription className="mb-6">
-          Пости від тебе, друзів і твоїх спільнот.
+          Пости, які ти зберіг(-ла) для себе.
         </CardDescription>
-
-        <div className="mb-6">
-          <Textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="Що нового?"
-            maxLength={5000}
-          />
-
-          {mediaUrl && (
-            <div className="relative mt-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- вже оптимізований Cloudinary webp */}
-              <img
-                src={mediaUrl}
-                alt="Вибране зображення"
-                className="max-h-72 w-full rounded-card object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => setMediaUrl(null)}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-foreground transition-colors duration-150 hover:bg-background"
-                aria-label="Прибрати зображення"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={isUploadingImage}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {isUploadingImage ? "Завантажуємо..." : "Додати фото"}
-            </Button>
-            <Button
-              disabled={content.trim().length === 0 || isPosting}
-              onClick={handlePublish}
-            >
-              {isPosting ? "Публікуємо..." : "Опублікувати"}
-            </Button>
-          </div>
-        </div>
 
         {status === "loading" && (
           <p className="py-6 text-center text-sm text-foreground/60">
@@ -371,13 +232,13 @@ export default function Home() {
 
         {status === "error" && (
           <p className="py-6 text-center text-sm text-danger">
-            Не вдалося завантажити стрічку. Спробуйте ще раз.
+            Не вдалося завантажити закладки. Спробуйте ще раз.
           </p>
         )}
 
         {status === "success" && posts.length === 0 && (
           <p className="py-6 text-center text-sm text-foreground/60">
-            Стрічка порожня. Додай друзів або вступи в спільноту.
+            Ще немає збережених постів.
           </p>
         )}
 
@@ -457,7 +318,7 @@ export default function Home() {
                   />
                   <BookmarkButton
                     active={post.viewerHasBookmarked}
-                    onToggle={() => handleToggleBookmark(post.id)}
+                    onToggle={() => handleRemoveBookmark(post.id)}
                   />
                 </div>
               </div>

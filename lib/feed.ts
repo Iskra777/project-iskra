@@ -24,6 +24,8 @@ export interface FeedPost {
   /** Типи, якими сам глядач уже відреагував — не чужі реакції, без
    * лічильника (PRINCIPLES.md, принцип 7). */
   viewerReactions: ReactionType[];
+  /** Чи глядач сам додав цей пост у закладки. */
+  viewerHasBookmarked: boolean;
 }
 
 /** Один запит на весь список постів (не N+1). */
@@ -47,6 +49,21 @@ export async function getViewerPostReactions(
   return map;
 }
 
+/** Той самий батчинг, що й {@link getViewerPostReactions}, для закладок. */
+export async function getViewerBookmarkedPostIds(
+  viewerId: string,
+  postIds: string[],
+): Promise<Set<string>> {
+  if (postIds.length === 0) return new Set();
+
+  const rows = await prisma.bookmark.findMany({
+    where: { userId: viewerId, postId: { in: postIds } },
+    select: { postId: true },
+  });
+
+  return new Set(rows.map((row) => row.postId));
+}
+
 export const authorSelect = {
   id: true,
   username: true,
@@ -56,7 +73,7 @@ export const authorSelect = {
 
 export const communitySelect = { id: true, name: true } as const;
 
-async function getFriendIds(userId: string): Promise<string[]> {
+export async function getFriendIds(userId: string): Promise<string[]> {
   const friendships = await prisma.friendship.findMany({
     where: {
       status: "accepted",
@@ -69,7 +86,9 @@ async function getFriendIds(userId: string): Promise<string[]> {
   );
 }
 
-async function getApprovedCommunityIds(userId: string): Promise<string[]> {
+export async function getApprovedCommunityIds(
+  userId: string,
+): Promise<string[]> {
   const memberships = await prisma.communityMember.findMany({
     where: { userId, status: "approved" },
     select: { communityId: true },
@@ -82,7 +101,7 @@ async function getApprovedCommunityIds(userId: string): Promise<string[]> {
  * пости зі спільнот, де глядач `approved`-учасник (незалежно від автора —
  * інакше приватна спільнота витікала б через дружбу з її учасником).
  */
-function feedWhere(
+export function feedWhere(
   viewerId: string,
   friendIds: string[],
   communityIds: string[],
@@ -178,10 +197,11 @@ export async function getFeed(
 
   const nextCursor = posts.length === limit ? posts[posts.length - 1].id : null;
 
-  const reactionsByPostId = await getViewerPostReactions(
-    viewerId,
-    posts.map((post) => post.id),
-  );
+  const postIds = posts.map((post) => post.id);
+  const [reactionsByPostId, bookmarkedPostIds] = await Promise.all([
+    getViewerPostReactions(viewerId, postIds),
+    getViewerBookmarkedPostIds(viewerId, postIds),
+  ]);
 
   return {
     ok: true,
@@ -194,6 +214,7 @@ export async function getFeed(
       author: post.author,
       community: post.community,
       viewerReactions: reactionsByPostId.get(post.id) ?? [],
+      viewerHasBookmarked: bookmarkedPostIds.has(post.id),
     })),
     nextCursor,
   };

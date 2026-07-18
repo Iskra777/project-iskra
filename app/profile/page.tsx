@@ -77,14 +77,19 @@ export default function ProfilePage() {
               Редагувати профіль
             </Button>
           </Link>
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={() => logout()}
-          >
-            Вийти
-          </Button>
+          <Link href="/bookmarks" className="flex-1">
+            <Button variant="secondary" className="w-full">
+              Мої закладки
+            </Button>
+          </Link>
         </div>
+        <Button
+          variant="secondary"
+          className="mt-3 w-full"
+          onClick={() => logout()}
+        >
+          Вийти
+        </Button>
       </Card>
     </div>
   );

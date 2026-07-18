@@ -1439,7 +1439,8 @@ Query: `?q=` (опційний, до 100 символів).
       "avatarUrl": "string | null"
     },
     "community": { "id": "uuid", "name": "string" } | null,
-    "viewerReactions": ["fire" | "bulb" | "clap"]
+    "viewerReactions": ["fire" | "bulb" | "clap"],
+    "viewerHasBookmarked": "boolean"
   }
 }
 ```
@@ -1549,7 +1550,8 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
         "avatarUrl": "string | null"
       },
       "community": { "id": "uuid", "name": "string" } | null,
-      "viewerReactions": ["fire" | "bulb" | "clap"]
+      "viewerReactions": ["fire" | "bulb" | "clap"],
+      "viewerHasBookmarked": "boolean"
     }
   ],
   "nextCursor": "uuid | null"
@@ -1557,6 +1559,8 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
 ```
 
 `viewerReactions` — типи, якими сам глядач уже відреагував на цей пост (`PUT/DELETE /api/posts/:id/reactions/:type`). Без чужих реакцій і без лічильника (PRINCIPLES.md, принцип 7).
+
+`viewerHasBookmarked` — чи глядач сам додав цей пост у закладки (`PUT/DELETE /api/posts/:id/bookmark`).
 
 ### Помилки
 
@@ -1807,3 +1811,48 @@ Query: `?before=<postId>&limit=` — курсорна пагінація, той
 | --------------- | ---- | ---------------------------------------------------- |
 | `invalid_token` | 401  | `Authorization` відсутній/невалідний                 |
 | `not_found`     | 404  | Пост не існує, видалений, або немає доступу до нього |
+
+## GET /api/bookmarks
+
+Список закладок глядача, найновіші за часом додавання в закладки перші (не за часом самого поста).
+
+Пост, чия видимість відтоді зникла (вийшов зі спільноти, розірвана дружба) або який м'яко видалено (`deletedAt`) — мовчки не показується у списку; сам рядок закладки при цьому не чиститься автоматично.
+
+### Request
+
+Query: `?before=<bookmarkId>&limit=` — курсорна пагінація, той самий підхід, що й `GET /api/feed`, але курсор — id закладки, а не поста. `limit` — 1-100, за замовчуванням 30.
+
+### Response 200
+
+```json
+{
+  "posts": [
+    {
+      "id": "uuid",
+      "content": "string",
+      "mediaUrl": "string | null",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp",
+      "author": {
+        "id": "uuid",
+        "username": "string",
+        "displayName": "string | null",
+        "avatarUrl": "string | null"
+      },
+      "community": { "id": "uuid", "name": "string" } | null,
+      "viewerReactions": ["fire" | "bulb" | "clap"],
+      "viewerHasBookmarked": "boolean"
+    }
+  ],
+  "nextCursor": "uuid | null"
+}
+```
+
+Формат поста ідентичний `GET /api/feed` — той самий `viewerReactions`, без лічильника (PRINCIPLES.md, принцип 7). `viewerHasBookmarked` тут завжди `true` (це список закладок глядача).
+
+### Помилки
+
+| code               | HTTP | Коли                                                         |
+| ------------------ | ---- | ------------------------------------------------------------ |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                         |
+| `validation_error` | 400  | Невалідні параметри пагінації або курсор не належить глядачу |

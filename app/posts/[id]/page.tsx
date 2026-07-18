@@ -17,6 +17,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ReactionButtons } from "@/components/reaction-buttons";
 import type { ReactionType } from "@/components/reaction-buttons";
+import { BookmarkButton } from "@/components/bookmark-button";
 import { useSession } from "@/lib/auth/session-context";
 import { useToast } from "@/components/ui/toast";
 
@@ -41,6 +42,7 @@ interface FeedPost {
   author: FeedAuthor;
   community: FeedCommunity | null;
   viewerReactions: ReactionType[];
+  viewerHasBookmarked: boolean;
 }
 
 interface CommentReply {
@@ -255,6 +257,27 @@ export default function PostPage() {
           : prev,
       );
       toast({ title: "Не вдалося зберегти реакцію", variant: "danger" });
+    }
+  }
+
+  async function handleTogglePostBookmark() {
+    if (!accessToken || !post) return;
+    const wasBookmarked = post.viewerHasBookmarked;
+
+    setPost((prev) =>
+      prev ? { ...prev, viewerHasBookmarked: !wasBookmarked } : prev,
+    );
+
+    const response = await fetch(`/api/posts/${postId}/bookmark`, {
+      method: wasBookmarked ? "DELETE" : "PUT",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setPost((prev) =>
+        prev ? { ...prev, viewerHasBookmarked: wasBookmarked } : prev,
+      );
+      toast({ title: "Не вдалося зберегти закладку", variant: "danger" });
     }
   }
 
@@ -484,10 +507,14 @@ export default function PostPage() {
           />
         )}
 
-        <div className="mt-3">
+        <div className="mt-3 flex items-center justify-between">
           <ReactionButtons
             activeTypes={post.viewerReactions}
             onToggle={handleTogglePostReaction}
+          />
+          <BookmarkButton
+            active={post.viewerHasBookmarked}
+            onToggle={handleTogglePostBookmark}
           />
         </div>
       </Card>
