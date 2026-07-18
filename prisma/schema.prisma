@@ -92,6 +92,7 @@ model User {
   comments                   Comment[]                 @relation("CommentAuthor")
   postReactions              PostReaction[]
   commentReactions           CommentReaction[]
+  bookmarks                  Bookmark[]
 
   @@map("users")
 }
@@ -288,6 +289,7 @@ model Post {
   community Community?     @relation(fields: [communityId], references: [id])
   comments  Comment[]
   reactions PostReaction[]
+  bookmarks Bookmark[]
 
   @@index([authorId])
   @@index([communityId])
@@ -352,4 +354,19 @@ model CommentReaction {
 
   @@unique([commentId, userId, type])
   @@map("comment_reactions")
+}
+
+/// DATABASE.md → Bookmark. Лише пости (не коментарі), той самий підхід,
+/// що й реакції — явний FK, не поліморфний зв'язок.
+model Bookmark {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+  post Post @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+  @@map("bookmarks")
 }
