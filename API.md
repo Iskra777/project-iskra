@@ -1856,3 +1856,429 @@ Query: `?before=<bookmarkId>&limit=` — курсорна пагінація, т
 | ------------------ | ---- | ------------------------------------------------------------ |
 | `invalid_token`    | 401  | `Authorization` відсутній/невалідний                         |
 | `validation_error` | 400  | Невалідні параметри пагінації або курсор не належить глядачу |
+
+---
+
+## POST /api/goals
+
+Створює ціль. Лише для себе — немає поняття "створити ціль іншому користувачу".
+
+### Request
+
+```json
+{
+  "title": "string, 1-200 символів",
+  "description": "string, до 5000 символів | null (опційно)",
+  "deadline": "timestamp | null (опційно)",
+  "isPrivate": "boolean (опційно, за замовчуванням true)"
+}
+```
+
+### Response 201
+
+```json
+{
+  "goal": {
+    "id": "uuid",
+    "title": "string",
+    "description": "string | null",
+    "deadline": "timestamp | null",
+    "status": "active" | "completed" | "abandoned",
+    "isPrivate": "boolean",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  },
+  "newAchievements": [
+    { "code": "string", "title": "string", "description": "string | null" }
+  ]
+}
+```
+
+`status` не приймається при створенні — нова ціль завжди `active`; змінити можна лише через `PATCH /api/goals/:id`.
+
+`newAchievements` — досягнення, нараховані **саме цим викликом** (DATABASE.md → Achievement → Правила й тригери нарахування). Порожній масив на кожному повторному виклику, що не нараховує нічого нового — не список усіх досягнень користувача (для цього `GET /api/users/me/achievements`). Той самий підхід повторюється в `PATCH /api/goals/:id` і `POST /api/goals/:id/progress` — усюди, де мутація може тригернути нарахування.
+
+### Помилки
+
+| code               | HTTP | Коли                                  |
+| ------------------ | ---- | ------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний  |
+| `validation_error` | 400  | Порожня/задовга назва, невалідні дані |
+
+---
+
+## GET /api/goals
+
+Список **власних** цілей глядача, найновіші перші. Без пагінації — особистий список, не стрічка.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "goals": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string | null",
+      "deadline": "timestamp | null",
+      "status": "active" | "completed" | "abandoned",
+      "isPrivate": "boolean",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp"
+    }
+  ]
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+
+---
+
+## GET /api/goals/:id
+
+Одна ціль. Лише власник — чужа чи неіснуюча ціль дає однакову відповідь (`404 not_found`, anti-enumeration). На відміну від постів, тут немає легітимного стану "видно, але не можна редагувати" — Goal ніколи не видима нікому, крім власника, тож приховувати сам факт існування правильніше, ніж розрізняти `forbidden`.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "goal": {
+    "id": "uuid",
+    "title": "string",
+    "description": "string | null",
+    "deadline": "timestamp | null",
+    "status": "active" | "completed" | "abandoned",
+    "isPrivate": "boolean",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                          |
+| --------------- | ---- | --------------------------------------------- |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний          |
+| `not_found`     | 404  | Ціль не існує або належить іншому користувачу |
+
+---
+
+## PATCH /api/goals/:id
+
+Часткове оновлення власної цілі. Будь-яке поле не передано — не чіпається; `description`/`deadline` передано як `null` — очищається.
+
+### Request
+
+```json
+{
+  "title": "string, 1-200 символів (опційно)",
+  "description": "string, до 5000 символів | null (опційно)",
+  "deadline": "timestamp | null (опційно)",
+  "status": "active" | "completed" | "abandoned" (опційно),
+  "isPrivate": "boolean (опційно)"
+}
+```
+
+### Response 200
+
+Той самий формат, що й `GET /api/goals/:id`, плюс `newAchievements` (див. `POST /api/goals`) — нараховується, коли цей виклик встановлює `status: "completed"`.
+
+### Помилки
+
+| code               | HTTP | Коли                                          |
+| ------------------ | ---- | --------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний          |
+| `validation_error` | 400  | Невалідні дані                                |
+| `not_found`        | 404  | Ціль не існує або належить іншому користувачу |
+
+---
+
+## DELETE /api/goals/:id
+
+Видаляє власну ціль. **Жорстке** видалення (не `deletedAt`) — на відміну від Post/Comment, Goal не має поля м'якого видалення в схемі (DATABASE.md).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                          |
+| --------------- | ---- | --------------------------------------------- |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний          |
+| `not_found`     | 404  | Ціль не існує або належить іншому користувачу |
+
+---
+
+## POST /api/goals/:id/progress
+
+Додає запис прогресу до власної цілі. Вкладено під ціль (той самий підхід, що й `POST /api/posts/:id/comments`) — запис завжди належить конкретній цілі. Дозволено декілька записів на одну ціль (історія відміток, не єдиний стан).
+
+### Request
+
+```json
+{
+  "value": "integer | null (опційно)",
+  "note": "string, до 2000 символів | null (опційно)"
+}
+```
+
+`value` — довільна метрика (напр. відсоток виконання, кількість сторінок тощо — DATABASE.md не обмежує діапазон), не лише 0-100. Обидва поля незалежно опційні — жодне не є обов'язковим.
+
+### Response 201
+
+```json
+{
+  "progress": {
+    "id": "uuid",
+    "value": "integer | null",
+    "note": "string | null",
+    "recordedAt": "timestamp"
+  },
+  "newAchievements": [
+    { "code": "string", "title": "string", "description": "string | null" }
+  ]
+}
+```
+
+`newAchievements` — див. `POST /api/goals`.
+
+### Помилки
+
+| code               | HTTP | Коли                                          |
+| ------------------ | ---- | --------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний          |
+| `validation_error` | 400  | `value` не ціле число, `note` довший за 2000  |
+| `not_found`        | 404  | Ціль не існує або належить іншому користувачу |
+
+---
+
+## GET /api/goals/:id/progress
+
+Історія записів прогресу цілі, найновіші перші. Курсорна пагінація — той самий підхід, що й `GET /api/feed`/`GET /api/bookmarks`. Лише власник цілі.
+
+### Request
+
+Query: `?before=<progressId>&limit=` — `limit` 1-100, за замовчуванням 30.
+
+### Response 200
+
+```json
+{
+  "progress": [
+    {
+      "id": "uuid",
+      "value": "integer | null",
+      "note": "string | null",
+      "recordedAt": "timestamp"
+    }
+  ],
+  "nextCursor": "uuid | null"
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                     |
+| ------------------ | ---- | -------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                     |
+| `validation_error` | 400  | Невалідні параметри пагінації, або курсор не з цієї цілі |
+| `not_found`        | 404  | Ціль не існує або належить іншому користувачу            |
+
+---
+
+## GET /api/users/me/achievements
+
+Список **уже отриманих** досягнень глядача, найновіші перші. Свідомо без locked-списку недосягнутого — показ "чого ще не досяг" підштовхує до compulsive-доганяння прогрес-бару, ближче до токсичного дизайну (PRINCIPLES.md, принцип 2), ніж до спокійної фіксації реального (DATABASE.md → Achievement → Правила й тригери нарахування).
+
+### Request
+
+Без тіла — токен через `Authorization`.
+
+### Response 200
+
+```json
+{
+  "achievements": [
+    {
+      "code": "string",
+      "title": "string",
+      "description": "string | null",
+      "iconUrl": "string | null",
+      "earnedAt": "timestamp"
+    }
+  ]
+}
+```
+
+Без пагінації — набір кодів за визначенням малий.
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+
+---
+
+## POST /api/diary
+
+Створює запис щоденника. Завжди приватний — без поля `isPrivate`, на відміну від `Goal` (DATABASE.md → DiaryEntry → Рішення дизайну).
+
+### Request
+
+```json
+{
+  "title": "string, 1-200 символів | null (опційно)",
+  "content": "string, 1-20000 символів"
+}
+```
+
+### Response 201
+
+```json
+{
+  "entry": {
+    "id": "uuid",
+    "title": "string | null",
+    "content": "string",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                   |
+| ------------------ | ---- | -------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний   |
+| `validation_error` | 400  | Порожній/задовгий `content` чи `title` |
+
+---
+
+## GET /api/diary
+
+Список власних записів щоденника, найновіші перші. Курсорна пагінація (`createdAt`+`id`, той самий підхід, що й `GET /api/feed`/`GET /api/bookmarks`) — на відміну від `GET /api/goals`, щоденник необмежений у часі журнал, не малий скінченний список.
+
+### Request
+
+Query: `?before=<entryId>&limit=` — `limit` 1-100, за замовчуванням 30.
+
+### Response 200
+
+```json
+{
+  "entries": [
+    {
+      "id": "uuid",
+      "title": "string | null",
+      "content": "string",
+      "createdAt": "timestamp",
+      "updatedAt": "timestamp"
+    }
+  ],
+  "nextCursor": "uuid | null"
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                           |
+| ------------------ | ---- | -------------------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                           |
+| `validation_error` | 400  | Невалідні параметри пагінації, або курсор не з цього щоденника |
+
+---
+
+## GET /api/diary/:id
+
+Один запис. Лише власник — чужий чи неіснуючий запис дає однакову відповідь (`404 not_found`, anti-enumeration, той самий підхід, що й `Goal`).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+Той самий формат, що й окремий елемент `GET /api/diary` (`{ "entry": {...} }`).
+
+### Помилки
+
+| code            | HTTP | Коли                                           |
+| --------------- | ---- | ---------------------------------------------- |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний           |
+| `not_found`     | 404  | Запис не існує або належить іншому користувачу |
+
+---
+
+## PATCH /api/diary/:id
+
+Часткове оновлення власного запису. Поле не передано — не чіпається.
+
+### Request
+
+```json
+{
+  "title": "string, 1-200 символів | null (опційно)",
+  "content": "string, 1-20000 символів (опційно)"
+}
+```
+
+### Response 200
+
+Той самий формат, що й `GET /api/diary/:id`.
+
+### Помилки
+
+| code               | HTTP | Коли                                           |
+| ------------------ | ---- | ---------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний           |
+| `validation_error` | 400  | Невалідні дані                                 |
+| `not_found`        | 404  | Запис не існує або належить іншому користувачу |
+
+---
+
+## DELETE /api/diary/:id
+
+Видаляє власний запис. **Жорстке** видалення — DiaryEntry, як і Goal, не має `deletedAt` у схемі.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                           |
+| --------------- | ---- | ---------------------------------------------- |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний           |
+| `not_found`     | 404  | Запис не існує або належить іншому користувачу |
