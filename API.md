@@ -2282,3 +2282,230 @@ Query: `?before=<entryId>&limit=` — `limit` 1-100, за замовчуванн
 | --------------- | ---- | ---------------------------------------------- |
 | `invalid_token` | 401  | `Authorization` відсутній/невалідний           |
 | `not_found`     | 404  | Запис не існує або належить іншому користувачу |
+
+---
+
+## POST /api/events
+
+Створює подію. Організатор — автор запиту.
+
+### Request
+
+```json
+{
+  "title": "string, 1-200 символів",
+  "description": "string, до 5000 символів | null (опційно)",
+  "format": "online | offline",
+  "locationOrLink": "string, до 500 символів | null (опційно)",
+  "startsAt": "ISO 8601 timestamp",
+  "endsAt": "ISO 8601 timestamp | null (опційно), має бути пізніше за startsAt"
+}
+```
+
+### Response 201
+
+```json
+{
+  "event": {
+    "id": "uuid",
+    "organizerId": "uuid",
+    "title": "string",
+    "description": "string | null",
+    "format": "online | offline",
+    "locationOrLink": "string | null",
+    "startsAt": "timestamp",
+    "endsAt": "timestamp | null",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                                  |
+| ------------------ | ---- | ----------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний                  |
+| `validation_error` | 400  | Невалідні дані (порожня назва, `endsAt` ≤ `startsAt`) |
+
+---
+
+## GET /api/events
+
+Публічний календар подій — видимий усім авторизованим користувачам (Event не має поля приватності, на відміну від Goal/DiaryEntry). Курсорна пагінація, сортування за `startsAt` **зростаюче** (найближчі спочатку) — на відміну від інших списків у проєкті (стрічка/закладки/щоденник), які сортують за `createdAt` спадаюче, бо це календар, а не стрічка.
+
+### Request
+
+Query-параметри:
+
+| Параметр | Тип             | Опис                                  |
+| -------- | --------------- | ------------------------------------- |
+| `after`  | uuid (опційно)  | Курсор — id останньої отриманої події |
+| `limit`  | число (опційно) | 1-100, за замовчуванням 30            |
+
+### Response 200
+
+```json
+{
+  "events": [{ "id": "uuid", "...": "той самий формат, що й POST" }],
+  "nextCursor": "uuid | null"
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                               |
+| ------------------ | ---- | -------------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний               |
+| `validation_error` | 400  | Невалідні параметри пагінації, або курсор не існує |
+
+---
+
+## GET /api/events/:id
+
+Одна подія. Публічна — видима будь-якому авторизованому користувачу, не лише організатору. На відміну від елементів `GET /api/events`, тут додатково повертаються `organizer` і `viewerStatus` — потрібні для сторінки події (кнопки "Іду"/"Можливо", посилання на профіль організатора).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "event": {
+    "id": "uuid",
+    "organizerId": "uuid",
+    "title": "string",
+    "description": "string | null",
+    "format": "online | offline",
+    "locationOrLink": "string | null",
+    "startsAt": "timestamp",
+    "endsAt": "timestamp | null",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp",
+    "organizer": {
+      "id": "uuid",
+      "username": "string",
+      "displayName": "string | null",
+      "avatarUrl": "string | null"
+    },
+    "viewerStatus": "going | interested | null"
+  }
+}
+```
+
+Без лічильника учасників — Principle 7 (немає публічних лічильників взаємодії ніде в проєкті), лише власний статус того, хто робить запит. `viewerStatus` технічно може бути `declined` на рівні схеми, але жоден ендпоінт цього не пише (див. `PUT /api/events/:id/attendance`).
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+| `not_found`     | 404  | Подія не існує                       |
+
+---
+
+## PATCH /api/events/:id
+
+Часткове оновлення. Лише організатор — чужа спроба редагування дає `403 forbidden` (не `404`, бо подія публічно видима, той самий підхід, що й `Post`, на відміну від anti-enumeration у Goal/DiaryEntry).
+
+### Request
+
+Ті самі поля, що й `POST /api/events`, усі опційні. Поле не передано — не чіпається.
+
+### Response 200
+
+Той самий формат, що й `GET /api/events/:id`.
+
+### Помилки
+
+| code               | HTTP | Коли                                   |
+| ------------------ | ---- | -------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний   |
+| `validation_error` | 400  | Невалідні дані (`endsAt` ≤ `startsAt`) |
+| `not_found`        | 404  | Подія не існує                         |
+| `forbidden`        | 403  | Викликач не є організатором            |
+
+---
+
+## DELETE /api/events/:id
+
+Видаляє подію. Лише організатор. **Жорстке** видалення — Event, як і Goal, не має `deletedAt` у схемі.
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+| `not_found`     | 404  | Подія не існує                       |
+| `forbidden`     | 403  | Викликач не є організатором          |
+
+---
+
+## PUT /api/events/:id/attendance
+
+Реєструє автора запиту на подію або змінює статус реєстрації. Ідемпотентно (`upsert`) — той самий підхід, що й `PUT /api/posts/:id/bookmark`. Організатор теж може зареєструватись на власну подію — це ніде не заборонено.
+
+### Request
+
+```json
+{
+  "status": "going | interested"
+}
+```
+
+`declined` не приймається — зарезервовано в схемі (DATABASE.md → EventAttendee) для майбутнього флоу запрошень, якого зараз немає.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code               | HTTP | Коли                                           |
+| ------------------ | ---- | ---------------------------------------------- |
+| `invalid_token`    | 401  | `Authorization` відсутній/невалідний           |
+| `validation_error` | 400  | `status` відсутній або не `going`/`interested` |
+| `not_found`        | 404  | Подія не існує                                 |
+
+---
+
+## DELETE /api/events/:id/attendance
+
+Відміняє реєстрацію автора запиту на подію. Ідемпотентно — повторний виклик без наявної реєстрації не є помилкою (той самий підхід, що й `DELETE /api/posts/:id/bookmark`).
+
+### Request
+
+Без тіла.
+
+### Response 200
+
+```json
+{
+  "success": true
+}
+```
+
+### Помилки
+
+| code            | HTTP | Коли                                 |
+| --------------- | ---- | ------------------------------------ |
+| `invalid_token` | 401  | `Authorization` відсутній/невалідний |
+| `not_found`     | 404  | Подія не існує                       |

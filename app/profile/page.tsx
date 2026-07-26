@@ -128,6 +128,11 @@ export default function ProfilePage() {
               Щоденник
             </Button>
           </Link>
+          <Link href="/events" className="min-w-[calc(50%-0.375rem)] flex-1">
+            <Button variant="secondary" className="w-full">
+              Події
+            </Button>
+          </Link>
         </div>
         <Button
           variant="secondary"

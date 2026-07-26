@@ -303,6 +303,8 @@ GIN trigram-індекси (`pg_trgm`) на `username` і `display_name` — ш�
 | status        | enum(going, interested, declined) |      |
 | registered_at | timestamp                         |      |
 
+`TODO`: `status: declined` — недосяжне через API.md (POST/GET+PUT/DELETE-ендпоінти реєстрації Phase 5 приймають лише `going`/`interested`). Значення зарезервоване для майбутнього флоу запрошень ("організатор запросив, я відхиляю"), якого зараз немає — є лише самостійна реєстрація.
+
 ---
 
 ## Achievement
