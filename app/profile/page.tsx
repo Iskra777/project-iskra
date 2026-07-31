@@ -133,6 +133,11 @@ export default function ProfilePage() {
               Події
             </Button>
           </Link>
+          <Link href="/projects" className="min-w-[calc(50%-0.375rem)] flex-1">
+            <Button variant="secondary" className="w-full">
+              Проєкти
+            </Button>
+          </Link>
         </div>
         <Button
           variant="secondary"
