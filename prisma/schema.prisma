@@ -130,6 +130,10 @@ model User {
   eventAttendances           EventAttendee[]
   ownedProjects              Project[]                 @relation("ProjectOwner")
   projectMemberships         ProjectMember[]
+  createdLearningPaths       LearningPath[]
+  hostedLearningRooms        LearningRoom[]            @relation("LearningRoomHost")
+  learningRoomMemberships    LearningRoomMember[]
+  addedMaterials             Material[]
 
   @@map("users")
 }
@@ -573,4 +577,79 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@map("project_members")
+}
+
+/// DATABASE.md → LearningPath. Заглушка з Phase 0 (без власного
+/// DEVELOPMENT_PLAN-таску) — реалізована зараз, бо LearningRoom.learningPathId
+/// на неї посилається; внутрішня структура (кроки/уроки) — досі `TODO`,
+/// поза обсягом цієї задачі.
+model LearningPath {
+  id          String   @id @default(uuid()) @db.Uuid
+  createdById String?  @map("created_by") @db.Uuid
+  title       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy User?          @relation(fields: [createdById], references: [id])
+  rooms     LearningRoom[]
+
+  @@map("learning_paths")
+}
+
+/// DATABASE.md → LearningRoom. Постійний публічний простір (без
+/// starts_at/ends_at, на відміну від Event) — будь-хто авторизований бачить
+/// і може приєднатись. Один хост (`hostId`, як `Event.organizerId`), без
+/// багаторівневих ролей — простіше за Project.
+model LearningRoom {
+  id             String   @id @default(uuid()) @db.Uuid
+  hostId         String   @map("host_id") @db.Uuid
+  title          String
+  description    String?
+  learningPathId String?  @map("learning_path_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  host         User                 @relation("LearningRoomHost", fields: [hostId], references: [id])
+  learningPath LearningPath?        @relation(fields: [learningPathId], references: [id])
+  members      LearningRoomMember[]
+  materials    Material[]
+
+  @@index([hostId])
+  @@map("learning_rooms")
+}
+
+/// DATABASE.md → LearningRoomMember. Пласке членство — без поля `role`
+/// (рішення дизайну: один хост, решта рівноправні учасники).
+model LearningRoomMember {
+  id       String   @id @default(uuid()) @db.Uuid
+  roomId   String   @map("room_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  room LearningRoom @relation(fields: [roomId], references: [id])
+  user User         @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+  @@map("learning_room_members")
+}
+
+/// DATABASE.md → Material. Явний FK на LearningRoom, не поліморфний
+/// звʼязок — той самий підхід, що й Bookmark/Reaction. `url` не nullable —
+/// матеріал завжди посилання/файл, на відміну від вільної нотатки.
+model Material {
+  id        String   @id @default(uuid()) @db.Uuid
+  roomId    String   @map("room_id") @db.Uuid
+  addedById String   @map("added_by") @db.Uuid
+  title     String
+  url       String
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  room    LearningRoom @relation(fields: [roomId], references: [id])
+  addedBy User         @relation(fields: [addedById], references: [id])
+
+  @@index([roomId])
+  @@map("materials")
 }

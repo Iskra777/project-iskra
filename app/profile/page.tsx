@@ -138,6 +138,14 @@ export default function ProfilePage() {
               Проєкти
             </Button>
           </Link>
+          <Link
+            href="/learning-rooms"
+            className="min-w-[calc(50%-0.375rem)] flex-1"
+          >
+            <Button variant="secondary" className="w-full">
+              Кімнати
+            </Button>
+          </Link>
         </div>
         <Button
           variant="secondary"

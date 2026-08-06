@@ -24,18 +24,19 @@ Core
 
 Продовження [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) → Phase 0 → "Звести єдину мапу". Усуває розбіжності між [ROADMAP.md](ROADMAP.md), Modules вище і [DATABASE.md](DATABASE.md), знайдені в первинному аудиті проєкту.
 
-| Фаза ROADMAP                                                                        | Модулі ARCHITECTURE                             | Сутності DATABASE                                                                      |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Phase 1 — Авторизація, Реєстрація, Профіль, Редагування профілю, Пошук користувачів | Authentication, User Profile, Search            | User                                                                                   |
-| Phase 2 — Друзі, Повідомлення, Групові чати, Спільноти                              | Messaging, Communities, Notifications           | Friendship, Conversation, ConversationParticipant, Message, Community, CommunityMember |
-| Phase 3 — Пости, Коментарі, Реакції, Закладки                                       | Feed                                            | Post, Comment, Reaction, Bookmark                                                      |
-| Phase 4 — Цілі, Прогрес, Досягнення, Особистий щоденник                             | Goals, Learning (Progress)                      | Goal, Progress, Achievement, UserAchievement, Badge, UserBadge, DiaryEntry             |
-| Phase 5 — Події, Спільні проєкти, Навчальні кімнати, Голосові кімнати               | Events, Projects, Learning                      | Event, EventAttendee, Project, ProjectMember, LearningPath                             |
-| Phase 6 — Відеодзвінки, AI Помічник, Marketplace знань, Мобільний застосунок        | AI Assistant, Messaging (дзвінки як розширення) | Listing, Transaction                                                                   |
+| Фаза ROADMAP                                                                        | Модулі ARCHITECTURE                             | Сутності DATABASE                                                                                      |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Phase 1 — Авторизація, Реєстрація, Профіль, Редагування профілю, Пошук користувачів | Authentication, User Profile, Search            | User                                                                                                   |
+| Phase 2 — Друзі, Повідомлення, Групові чати, Спільноти                              | Messaging, Communities, Notifications           | Friendship, Conversation, ConversationParticipant, Message, Community, CommunityMember                 |
+| Phase 3 — Пости, Коментарі, Реакції, Закладки                                       | Feed                                            | Post, Comment, Reaction, Bookmark                                                                      |
+| Phase 4 — Цілі, Прогрес, Досягнення, Особистий щоденник                             | Goals, Learning (Progress)                      | Goal, Progress, Achievement, UserAchievement, Badge, UserBadge, DiaryEntry                             |
+| Phase 5 — Події, Спільні проєкти, Навчальні кімнати, Голосові кімнати               | Events, Projects, Learning                      | Event, EventAttendee, Project, ProjectMember, LearningPath, LearningRoom, LearningRoomMember, Material |
+| Phase 6 — Відеодзвінки, AI Помічник, Marketplace знань, Мобільний застосунок        | AI Assistant, Messaging (дзвінки як розширення) | Listing, Transaction                                                                                   |
 
 ### Розбіжності, які лишаються відкритими
 
-- **Навчальні й голосові кімнати** (Phase 5) не мають ні окремого модуля в ARCHITECTURE, ні сутностей у DATABASE.md — концепція взагалі не спроєктована (позначено `TODO` в DEVELOPMENT_PLAN.md).
+- **Навчальні кімнати** (Phase 5): концепція ухвалена (DATABASE.md → LearningRoom → Рішення дизайну) — постійний публічний простір, не сесія. Схема ще не спроєктована (наступна задача DEVELOPMENT_PLAN.md).
+- **Голосові кімнати** (Phase 5) не мають ні окремого модуля в ARCHITECTURE, ні сутностей у DATABASE.md — концепція взагалі не спроєктована (позначено `TODO` в DEVELOPMENT_PLAN.md).
 - **Відеодзвінки** (Phase 6) так само без сутності `Call` у DATABASE.md — окрема майбутня задача.
 - **Feed** — не окремий крок ROADMAP, а технічна реалізація Phase 3 (стрічка постів), не нова сутність.
 - **Notifications** і **Settings** — наскрізні модулі: Settings починається в Phase 1 (редагування профілю), Notifications стає потрібним з Phase 2 (запити дружби, повідомлення), обидва ростуть далі — не привʼязані до однієї фази.
