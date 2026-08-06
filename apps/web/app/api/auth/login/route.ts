@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { authenticateUser } from "@/lib/auth/authenticate";
 import { createSession } from "@/lib/auth/session";
-import { setRefreshTokenCookie } from "@/lib/auth/cookies";
+import { isMobileClient, setRefreshTokenCookie } from "@/lib/auth/cookies";
 import { checkRateLimit, recordAttempt } from "@/lib/rate-limit";
 import { emailSchema } from "@/lib/auth/validation";
 
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
   const response = NextResponse.json({
     user: result.user,
     accessToken: session.accessToken,
+    ...(isMobileClient(request) ? { refreshToken: session.refreshToken } : {}),
   });
   setRefreshTokenCookie(response, session.refreshToken);
   return response;

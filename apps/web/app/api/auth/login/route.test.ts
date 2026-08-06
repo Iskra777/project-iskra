@@ -16,11 +16,11 @@ const EMAILS = {
   rateLimit: "route-test-ratelimit@example.com",
 };
 
-function login(email: string, password: string) {
+function login(email: string, password: string, headers: HeadersInit = {}) {
   return POST(
     new Request("http://localhost/api/auth/login", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ email, password }),
     }),
   );
@@ -86,6 +86,19 @@ describe("POST /api/auth/login", () => {
     expect(body.user.email).toBe(EMAILS.success);
     expect(body.user.passwordHash).toBeUndefined();
     expect(typeof body.accessToken).toBe("string");
+    expect(response.headers.get("set-cookie")).toContain("refresh_token=");
+    expect(body.refreshToken).toBeUndefined();
+  });
+
+  it("includes refreshToken in the body only for the X-Client: mobile header", async () => {
+    const response = await login(EMAILS.success, PASSWORD, {
+      "X-Client": "mobile",
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(typeof body.refreshToken).toBe("string");
+    // Still sets the cookie too — mobile just ignores it.
     expect(response.headers.get("set-cookie")).toContain("refresh_token=");
   });
 

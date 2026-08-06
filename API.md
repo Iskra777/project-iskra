@@ -5,7 +5,8 @@
 ## Умовності
 
 - Формат помилок єдиний для всіх ендпоінтів: `{ "error": { "code": string, "message": string } }`.
-- Access-токен передається в тілі відповіді, клієнт тримає його в пам'яті й шле як `Authorization: Bearer <token>`. Refresh-токен — лише httpOnly cookie, ніколи в тілі відповіді й ніколи не читається з JS.
+- Access-токен передається в тілі відповіді, клієнт тримає його в пам'яті й шле як `Authorization: Bearer <token>`. Для веба refresh-токен — лише httpOnly cookie, ніколи в тілі відповіді й ніколи не читається з JS.
+- **Мобільний клієнт** (React Native `fetch` не має браузерного cookie jar для httpOnly-кук): шле заголовок `X-Client: mobile` на кожному auth-запиті — лише тоді `login`/`refresh` **додатково** повертають `refreshToken` у тілі JSON-відповіді (веб цей заголовок ніколи не шле, тож для веба нічого не змінюється). Мобільний клієнт зберігає його в `expo-secure-store` (native) / `localStorage` (web-збірка Expo) і передає назад через заголовок `X-Refresh-Token` на `POST /api/auth/refresh`/`POST /api/auth/logout` (`getRefreshTokenFromRequest`, [lib/auth/cookies.ts](lib/auth/cookies.ts), перевіряє cookie першою, заголовок — fallback).
 - Коди помилок — стабільний контракт для клієнта (не змінювати без потреби); текст `message` — для показу користувачу, може змінюватись вільно.
 
 ---
@@ -35,11 +36,12 @@
     "avatarUrl": "string | null",
     "role": "user | moderator | admin"
   },
-  "accessToken": "string"
+  "accessToken": "string",
+  "refreshToken": "string (лише якщо запит мав заголовок X-Client: mobile)"
 }
 ```
 
-Додатково `Set-Cookie: refresh_token=<jwt>; HttpOnly; Secure (лише production); SameSite=Lax; Path=/api/auth; Max-Age=2592000` (30 днів, збігається з `REFRESH_TOKEN_TTL_SECONDS` у [lib/auth/tokens.ts](lib/auth/tokens.ts)).
+Додатково `Set-Cookie: refresh_token=<jwt>; HttpOnly; Secure (лише production); SameSite=Lax; Path=/api/auth; Max-Age=2592000` (30 днів, збігається з `REFRESH_TOKEN_TTL_SECONDS` у [lib/auth/tokens.ts](lib/auth/tokens.ts)) — виставляється завжди, незалежно від `X-Client`.
 
 ### Помилки
 
@@ -59,21 +61,22 @@
 
 ## POST /api/auth/refresh
 
-Оновлює access-токен, використовуючи `refresh_token` cookie. Ротація: старий refresh-токен відкликається, видається нова пара.
+Оновлює access-токен, використовуючи `refresh_token` cookie (або `X-Refresh-Token`-заголовок для мобільного — fallback, коли cookie відсутня). Ротація: старий refresh-токен відкликається, видається нова пара.
 
 ### Request
 
-Без тіла — токен береться з cookie `refresh_token` (виставляється при логіні, `Path=/api/auth`).
+Без тіла. Токен береться з cookie `refresh_token` (веб, виставляється при логіні, `Path=/api/auth`) або із заголовка `X-Refresh-Token` (мобільний, значення зі збереженого при логіні `refreshToken`).
 
 ### Response 200
 
 ```json
 {
-  "accessToken": "string"
+  "accessToken": "string",
+  "refreshToken": "string (лише якщо запит мав заголовок X-Client: mobile)"
 }
 ```
 
-Додатково новий `Set-Cookie: refresh_token=<jwt>; ...` (та сама конфігурація, що й у login).
+Додатково новий `Set-Cookie: refresh_token=<jwt>; ...` (та сама конфігурація, що й у login) — виставляється завжди, незалежно від `X-Client`.
 
 ### Помилки
 
@@ -91,7 +94,7 @@
 
 ### Request
 
-Без тіла — токен береться з cookie `refresh_token`.
+Без тіла. Токен береться з cookie `refresh_token` (веб) або заголовка `X-Refresh-Token` (мобільний — той самий fallback, що й у `POST /api/auth/refresh`).
 
 ### Response 200
 

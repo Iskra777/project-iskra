@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { refreshSession } from "@/lib/auth/session";
 import {
   getRefreshTokenFromRequest,
+  isMobileClient,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
 } from "@/lib/auth/cookies";
@@ -30,6 +31,9 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({
     accessToken: result.session.accessToken,
+    ...(isMobileClient(request)
+      ? { refreshToken: result.session.refreshToken }
+      : {}),
   });
   setRefreshTokenCookie(response, result.session.refreshToken);
   return response;

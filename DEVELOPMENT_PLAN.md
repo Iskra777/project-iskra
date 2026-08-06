@@ -409,7 +409,7 @@
 
 ✅ Налаштувати проєкт мобільного застосунку і базову навігацію — репозиторій перетворено на pnpm workspace-monorepo (`apps/web` + `apps/mobile` + `packages/`), `apps/mobile` створено через `create-expo-app` (tabs-шаблон: Expo Router, дві заглушкові вкладки — базова навігація вже працює з коробки)
 
-⬜ Портувати Auth flow (вхід, реєстрація, скидання пароля)
+✅ Портувати Auth flow (вхід, реєстрація, скидання пароля) — заодно розширено бекенд-контракт: `X-Client: mobile` → `login`/`refresh` повертають `refreshToken` у тілі JSON (мобільний немає httpOnly cookie jar), `X-Refresh-Token`-заголовок як fallback на `refresh`/`logout` (API.md, [lib/auth/cookies.ts](apps/web/lib/auth/cookies.ts))
 
 ⬜ Портувати екран профілю
 
