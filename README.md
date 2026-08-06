@@ -6,13 +6,15 @@ One Spark Can Change Everything.
 
 ## Стек
 
-Next.js (App Router) + TypeScript + Tailwind CSS + Prisma + PostgreSQL. Деталі й обґрунтування — в [ARCHITECTURE.md](ARCHITECTURE.md#tech-stack).
+Next.js (App Router) + TypeScript + Tailwind CSS + Prisma + PostgreSQL (веб), React Native/Expo (мобільний застосунок). Деталі й обґрунтування — в [ARCHITECTURE.md](ARCHITECTURE.md#tech-stack).
+
+pnpm workspace-monorepo: `apps/web` (Next.js), `apps/mobile` (Expo), `packages/` (спільні типи). Команди нижче й у `package.json` в корені — проксі на `apps/web`.
 
 ## Запуск локально
 
 ```bash
 pnpm install
-cp .env.example .env   # заповнити JWT-секрети реальними значеннями
+cp apps/web/.env.example apps/web/.env   # заповнити JWT-секрети реальними значеннями
 docker compose up -d   # локальний Postgres, порт 5433
 pnpm prisma migrate dev
 pnpm dev
