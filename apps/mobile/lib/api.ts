@@ -1,4 +1,6 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+export const WS_PORT = process.env.EXPO_PUBLIC_WS_PORT ?? "4001";
 
 export interface SessionUser {
   id: string;
@@ -40,6 +42,39 @@ export interface FeedPost {
   community: { id: string; name: string } | null;
   viewerReactions: ReactionType[];
   viewerHasBookmarked: boolean;
+}
+
+export interface ConversationParticipant {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: string;
+}
+
+export interface ConversationListItem {
+  id: string;
+  type: string;
+  title: string | null;
+  otherParticipant: ConversationParticipant | null;
+  lastMessage: { content: string; senderId: string; sentAt: string } | null;
+  unread: boolean;
+}
+
+export interface ConversationDetail {
+  id: string;
+  type: string;
+  title: string | null;
+  otherParticipant: ConversationParticipant | null;
+  participants: ConversationParticipant[];
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  sentAt: string;
 }
 
 export interface ApiError {
@@ -269,4 +304,93 @@ export function removeBookmark(accessToken: string, postId: string) {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+}
+
+export function getConversations(accessToken: string) {
+  return request<{ conversations: ConversationListItem[] }>(
+    "/api/conversations",
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getConversation(accessToken: string, conversationId: string) {
+  return request<{ conversation: ConversationDetail }>(
+    `/api/conversations/${conversationId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getMessages(
+  accessToken: string,
+  conversationId: string,
+  before?: string,
+) {
+  const query = before ? `?before=${before}` : "";
+  return request<{ messages: ChatMessage[]; nextCursor: string | null }>(
+    `/api/conversations/${conversationId}/messages${query}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function sendMessage(
+  accessToken: string,
+  conversationId: string,
+  content: string,
+) {
+  return request<{ message: ChatMessage }>(
+    `/api/conversations/${conversationId}/messages`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ content }),
+    },
+  );
+}
+
+export function markConversationRead(
+  accessToken: string,
+  conversationId: string,
+) {
+  return request<{ lastReadAt: string }>(
+    `/api/conversations/${conversationId}/read`,
+    { method: "PATCH", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function createDirectConversation(
+  accessToken: string,
+  username: string,
+) {
+  return request<{
+    conversation: { id: string; otherParticipant: ConversationParticipant };
+  }>("/api/conversations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ username }),
+  });
+}
+
+export function createGroupConversation(
+  accessToken: string,
+  title: string,
+  usernames: string[],
+) {
+  return request<{ conversation: { id: string } }>("/api/conversations/group", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ title, usernames }),
+  });
+}
+
+export interface UserSearchResult {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+export function searchUsers(query: string) {
+  return request<{ users: UserSearchResult[] }>(
+    `/api/users/search?q=${encodeURIComponent(query)}`,
+  );
 }
