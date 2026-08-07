@@ -394,3 +394,59 @@ export function searchUsers(query: string) {
     `/api/users/search?q=${encodeURIComponent(query)}`,
   );
 }
+
+export function addParticipants(
+  accessToken: string,
+  conversationId: string,
+  usernames: string[],
+) {
+  return request<{ success: true }>(
+    `/api/conversations/${conversationId}/participants`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ usernames }),
+    },
+  );
+}
+
+export function promoteParticipant(
+  accessToken: string,
+  conversationId: string,
+  userId: string,
+) {
+  return request<{ success: true }>(
+    `/api/conversations/${conversationId}/participants/${userId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ role: "admin" }),
+    },
+  );
+}
+
+export function removeParticipant(
+  accessToken: string,
+  conversationId: string,
+  userId: string,
+) {
+  return request<{ success: true }>(
+    `/api/conversations/${conversationId}/participants/${userId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function leaveConversation(
+  accessToken: string,
+  conversationId: string,
+  newAdminUserId?: string,
+) {
+  return request<{ success: true }>(
+    `/api/conversations/${conversationId}/leave`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify(newAdminUserId ? { newAdminUserId } : {}),
+    },
+  );
+}

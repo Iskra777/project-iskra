@@ -297,6 +297,17 @@ export default function ChatScreen() {
             </Text>
           )}
         </View>
+        {isGroup && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push(`/(tabs)/messages/${conversationId}/participants`)
+            }
+            style={styles.participantsButton}
+          >
+            <Text style={{ color: colors.tint, fontSize: 13 }}>Учасники</Text>
+          </Pressable>
+        )}
       </View>
 
       <FlatList
@@ -390,6 +401,7 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   headerName: { fontSize: 15, fontWeight: "600" },
   headerSub: { fontSize: 12, marginTop: 1 },
+  participantsButton: { padding: 4 },
   list: { padding: 16, gap: 8, flexGrow: 1 },
   bubbleRow: { flexDirection: "row" },
   bubble: {
