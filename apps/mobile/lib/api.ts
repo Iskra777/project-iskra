@@ -495,3 +495,118 @@ export function respondFriendRequest(
     body: JSON.stringify({ action }),
   });
 }
+
+export interface CommunityListItem {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: "public" | "private";
+  memberCount: number;
+}
+
+export interface CommunityMember {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: "admin" | "moderator" | "member";
+}
+
+export interface CommunityDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: "public" | "private";
+  ownerId: string;
+  memberCount: number;
+  members: CommunityMember[] | null;
+  viewerMembership: { role: string; status: "approved" | "pending" } | null;
+  pendingRequests: CommunityMember[] | null;
+}
+
+export function getCommunities(accessToken: string, query?: string) {
+  const q = query ? `?q=${encodeURIComponent(query)}` : "";
+  return request<{ communities: CommunityListItem[] }>(`/api/communities${q}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function getCommunity(accessToken: string, communityId: string) {
+  return request<{ community: CommunityDetail }>(
+    `/api/communities/${communityId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function createCommunity(
+  accessToken: string,
+  input: {
+    name: string;
+    description: string | null;
+    visibility: "public" | "private";
+  },
+) {
+  return request<{ community: { id: string } }>("/api/communities", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
+
+export function joinCommunity(accessToken: string, communityId: string) {
+  return request<{ status: "approved" | "pending" }>(
+    `/api/communities/${communityId}/join`,
+    { method: "POST", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function leaveCommunity(accessToken: string, communityId: string) {
+  return request<{ success: true }>(`/api/communities/${communityId}/leave`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({}),
+  });
+}
+
+export function respondCommunityJoinRequest(
+  accessToken: string,
+  communityId: string,
+  targetUserId: string,
+  action: "approve" | "reject",
+) {
+  return request<{ success: true }>(
+    `/api/communities/${communityId}/members/${targetUserId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ action }),
+    },
+  );
+}
+
+export function changeCommunityMemberRole(
+  accessToken: string,
+  communityId: string,
+  targetUserId: string,
+  role: "admin" | "moderator" | "member",
+) {
+  return request<{ success: true }>(
+    `/api/communities/${communityId}/members/${targetUserId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ role }),
+    },
+  );
+}
+
+export function removeCommunityMember(
+  accessToken: string,
+  communityId: string,
+  targetUserId: string,
+) {
+  return request<{ success: true }>(
+    `/api/communities/${communityId}/members/${targetUserId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
