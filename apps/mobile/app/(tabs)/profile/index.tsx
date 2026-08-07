@@ -99,6 +99,15 @@ export default function ProfileScreen() {
       </View>
 
       <Card style={styles.card}>
+        <CardTitle>Швидкі посилання</CardTitle>
+        <Button
+          title="🔖 Закладки"
+          variant="secondary"
+          onPress={() => router.push("/(tabs)/profile/bookmarks")}
+        />
+      </Card>
+
+      <Card style={styles.card}>
         <CardTitle>Досягнення</CardTitle>
         <CardDescription style={styles.achievementsHint}>
           Бачиш лише ти.

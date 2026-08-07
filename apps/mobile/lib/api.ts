@@ -238,6 +238,14 @@ export function getFeed(accessToken: string, before?: string) {
   );
 }
 
+export function getBookmarks(accessToken: string, before?: string) {
+  const query = before ? `?before=${before}` : "";
+  return request<{ posts: FeedPost[]; nextCursor: string | null }>(
+    `/api/bookmarks${query}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
 export function createPost(
   accessToken: string,
   input: { content: string; mediaUrl: string | null },
