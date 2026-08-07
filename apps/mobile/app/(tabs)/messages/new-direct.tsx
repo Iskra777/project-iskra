@@ -7,6 +7,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { UserSearchResult } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -89,7 +91,9 @@ export default function NewDirectMessageScreen() {
             <Text style={styles.stateText}>Шукаємо...</Text>
           )}
           {error && (
-            <Text style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error}
+            </Text>
           )}
         </View>
       }
@@ -109,7 +113,7 @@ export default function NewDirectMessageScreen() {
             {candidate.displayName ?? candidate.username}
           </Text>
           {startingId === candidate.id && (
-            <Text style={{ fontSize: 13, opacity: 0.6 }}>...</Text>
+            <Text style={styles.loadingDots}>...</Text>
           )}
         </Pressable>
       )}
@@ -118,20 +122,22 @@ export default function NewDirectMessageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  headerBlock: { gap: 8, marginBottom: 8 },
+  container: { padding: Spacing.md },
+  headerBlock: { gap: Spacing.sm, marginBottom: Spacing.sm },
   stateText: {
+    ...Typography.small,
     textAlign: "center",
-    fontSize: 13,
     opacity: 0.6,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
+  errorText: Typography.small,
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    gap: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm + 2,
+    paddingHorizontal: Spacing.sm,
   },
-  resultName: { fontSize: 14, flex: 1 },
+  resultName: { ...Typography.small, flex: 1 },
+  loadingDots: { ...Typography.small, opacity: 0.6 },
 });

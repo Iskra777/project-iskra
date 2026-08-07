@@ -4,6 +4,8 @@ import { StyleSheet, type ViewProps } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 
 export function Card({ style, ...props }: ViewProps) {
   const colors = Colors[useColorScheme()];
@@ -32,7 +34,7 @@ export function CardDescription(props: ComponentProps<typeof Text>) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, padding: 20 },
-  title: { fontSize: 18, fontWeight: "600", marginBottom: 4 },
-  description: { fontSize: 13 },
+  card: { borderRadius: 16, padding: Spacing.lg },
+  title: { ...Typography.h3, marginBottom: Spacing.xs },
+  description: { ...Typography.small },
 });

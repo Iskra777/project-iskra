@@ -3,6 +3,8 @@ import { StyleSheet, TextInput, type TextInputProps } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -23,8 +25,12 @@ export function Input({ label, error, style, ...props }: InputProps) {
           styles.input,
           {
             color: colors.text,
-            backgroundColor: colors.card,
-            borderColor: error ? colors.danger : colors.border,
+            // Без власної рамки — інакше поле в картці читається як окремий
+            // "блок у блоці". Легкий відтінок фону + помітніше підкреслення,
+            // щоб поле все ж читалось як інтерактивне, а не губилось.
+            backgroundColor: `${colors.text}0D`,
+            borderBottomColor: error ? colors.danger : colors.tabIconDefault,
+            borderBottomWidth: error ? 2 : 1.5,
           },
           style,
         ]}
@@ -38,14 +44,13 @@ export function Input({ label, error, style, ...props }: InputProps) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 6 },
-  label: { fontSize: 14, fontWeight: "500" },
+  container: { gap: Spacing.xs + 2, backgroundColor: "transparent" },
+  label: { fontSize: Typography.small.fontSize, fontWeight: "500" },
   input: {
     height: 44,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    fontSize: 16,
+    borderRadius: 8,
+    paddingHorizontal: Spacing.sm,
+    fontSize: Typography.body.fontSize,
   },
-  error: { fontSize: 13 },
+  error: { fontSize: Typography.small.fontSize },
 });

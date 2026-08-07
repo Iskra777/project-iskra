@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { Achievement } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -42,7 +44,13 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Card style={styles.card}>
+      <View
+        style={[
+          styles.section,
+          styles.sectionDivider,
+          { borderBottomColor: colors.border },
+        ]}
+      >
         <View style={styles.header}>
           <Avatar
             uri={user.avatarUrl}
@@ -88,7 +96,7 @@ export default function ProfileScreen() {
           />
           <Button title="Вийти" variant="secondary" onPress={logout} />
         </View>
-      </Card>
+      </View>
 
       <Card style={styles.card}>
         <CardTitle>Досягнення</CardTitle>
@@ -139,22 +147,33 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 16 },
-  card: { gap: 4 },
-  header: { flexDirection: "row", alignItems: "center", gap: 16 },
+  container: { padding: Spacing.md, gap: Spacing.lg },
+  section: { gap: Spacing.xs },
+  sectionDivider: { paddingBottom: Spacing.lg, borderBottomWidth: 1 },
+  card: { gap: Spacing.xs },
+  header: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
   headerText: { flex: 1 },
-  fields: { marginTop: 16, gap: 8 },
-  field: { fontSize: 14 },
-  actions: { marginTop: 16, gap: 8 },
-  achievementsHint: { marginBottom: 8 },
-  emptyState: { paddingVertical: 12, fontSize: 13, textAlign: "center" },
-  achievement: { paddingVertical: 10, borderTopWidth: 1 },
+  fields: { marginTop: Spacing.md, gap: Spacing.sm },
+  field: Typography.small,
+  actions: { marginTop: Spacing.md, gap: Spacing.sm },
+  achievementsHint: { marginBottom: Spacing.sm },
+  emptyState: {
+    ...Typography.small,
+    paddingVertical: Spacing.sm + Spacing.xs,
+    textAlign: "center",
+  },
+  achievement: {
+    paddingVertical: Spacing.sm + 2,
+    borderTopWidth: 1,
+    backgroundColor: "transparent",
+  },
   achievementRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 8,
+    gap: Spacing.sm,
+    backgroundColor: "transparent",
   },
-  achievementTitle: { fontSize: 14, fontWeight: "500" },
-  achievementDate: { fontSize: 12 },
-  achievementDescription: { fontSize: 13, marginTop: 2 },
+  achievementTitle: { ...Typography.small, fontWeight: "500" },
+  achievementDate: { ...Typography.small },
+  achievementDescription: { ...Typography.small, marginTop: Spacing.xs / 2 },
 });

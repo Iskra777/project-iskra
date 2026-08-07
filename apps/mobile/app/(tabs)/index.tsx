@@ -16,6 +16,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { FeedPost, ReactionType } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -85,6 +87,7 @@ export default function FeedScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      allowsEditing: true,
       quality: 0.8,
     });
     if (result.canceled) return;
@@ -231,7 +234,13 @@ export default function FeedScreen() {
         onEndReachedThreshold={0.5}
         onEndReached={handleLoadMore}
         ListHeaderComponent={
-          <Card style={styles.composer}>
+          <View
+            style={[
+              styles.composer,
+              styles.composerDivider,
+              { borderBottomColor: colors.border },
+            ]}
+          >
             <Input
               placeholder="Що нового?"
               value={content}
@@ -288,7 +297,7 @@ export default function FeedScreen() {
                 Стрічка порожня. Додай друзів або вступи в спільноту.
               </Text>
             )}
-          </Card>
+          </View>
         }
         renderItem={({ item }) => (
           <Card>
@@ -336,15 +345,20 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 16 },
-  composer: { gap: 4 },
-  composerInput: { height: 80, textAlignVertical: "top", paddingTop: 10 },
-  previewWrapper: { marginTop: 12 },
+  container: { padding: Spacing.md, gap: Spacing.md },
+  composer: { gap: Spacing.xs },
+  composerDivider: { paddingBottom: Spacing.lg, borderBottomWidth: 1 },
+  composerInput: {
+    height: 80,
+    textAlignVertical: "top",
+    paddingTop: Spacing.sm + 2,
+  },
+  previewWrapper: { marginTop: Spacing.sm + Spacing.xs },
   preview: { width: "100%", height: 180, borderRadius: 16 },
   removePreview: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: Spacing.sm,
+    right: Spacing.sm,
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -352,22 +366,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   composerActions: {
-    marginTop: 12,
+    marginTop: Spacing.sm + Spacing.xs,
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 8,
+    gap: Spacing.sm,
   },
   composerButton: { flex: 1 },
-  stateText: { marginTop: 16, textAlign: "center", fontSize: 13, opacity: 0.6 },
+  stateText: {
+    ...Typography.small,
+    marginTop: Spacing.md,
+    textAlign: "center",
+    opacity: 0.6,
+  },
   modalBackdrop: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 24,
+    padding: Spacing.lg,
   },
-  modalCard: { width: "100%", maxWidth: 400, gap: 12 },
-  modalTitle: { fontSize: 18, fontWeight: "600" },
-  modalHint: { fontSize: 13 },
-  modalActions: { gap: 8 },
+  modalCard: { width: "100%", maxWidth: 400, gap: Spacing.sm + Spacing.xs },
+  modalTitle: Typography.h3,
+  modalHint: Typography.small,
+  modalActions: { gap: Spacing.sm, backgroundColor: "transparent" },
 });

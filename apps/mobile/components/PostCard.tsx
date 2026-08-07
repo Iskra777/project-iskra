@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/Button";
 import { ReactionButtons } from "@/components/ui/ReactionButtons";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import type { FeedPost, ReactionType } from "@/lib/api";
 
 function formatTimestamp(createdAt: string) {
@@ -43,7 +45,7 @@ export function PostCard({
             fallback={post.author.displayName ?? post.author.username}
             size={36}
           />
-          <View>
+          <RNView style={styles.nameColumn}>
             <Text style={styles.authorName}>
               {post.author.displayName ?? post.author.username}
             </Text>
@@ -51,15 +53,10 @@ export function PostCard({
               {post.community && `у ${post.community.name} · `}
               {formatTimestamp(post.createdAt)}
             </Text>
-          </View>
+          </RNView>
         </RNView>
         {isOwn && (
-          <Button
-            title="Видалити"
-            variant="secondary"
-            onPress={onRequestDelete}
-            style={styles.deleteButton}
-          />
+          <Button title="Видалити" variant="ghost" onPress={onRequestDelete} />
         )}
       </View>
 
@@ -86,30 +83,39 @@ export function PostCard({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 4 },
-  header: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
+  container: { gap: Spacing.xs, backgroundColor: "transparent" },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+    backgroundColor: "transparent",
+  },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: Spacing.sm + Spacing.xs,
     backgroundColor: "transparent",
   },
-  authorName: { fontSize: 14, fontWeight: "500" },
-  meta: { fontSize: 12, marginTop: 2 },
-  deleteButton: { height: 32, paddingHorizontal: 12 },
-  content: { marginTop: 12, fontSize: 14 },
+  nameColumn: { backgroundColor: "transparent" },
+  authorName: { ...Typography.small, fontWeight: "500" },
+  meta: { ...Typography.small, marginTop: Spacing.xs / 2 },
+  content: { marginTop: Spacing.sm + Spacing.xs, ...Typography.body },
   media: {
-    marginTop: 12,
+    marginTop: Spacing.sm + Spacing.xs,
     width: "100%",
     height: 220,
     borderRadius: 16,
   },
   actions: {
-    marginTop: 8,
+    marginTop: Spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "transparent",
   },
-  reactions: { flexDirection: "row", gap: 4, backgroundColor: "transparent" },
+  reactions: {
+    flexDirection: "row",
+    gap: Spacing.xs,
+    backgroundColor: "transparent",
+  },
 });

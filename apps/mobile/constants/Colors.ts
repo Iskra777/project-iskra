@@ -22,9 +22,16 @@ export default {
   },
   dark: {
     text: "#F9FAFB",
-    background: "#0B0F19",
-    card: "#151A26",
-    border: "#252B3A",
+    // DESIGN_SYSTEM.md вказує #0B0F19/#141A27 (Colors → Background/Cards),
+    // але на мобільних екранах обидва відтінки читаються помітно синіми
+    // (B-канал найвищий) — і, на відміну від вебу (де незаданий фон CSS
+    // прозорий), `View` з components/Themed.tsx завжди малює color.background
+    // непрозоро за замовчуванням, тож будь-який вкладений View без явного
+    // transparent лягає синім шаром поверх картки. За проханням власника
+    // продукту нейтралізовано обидва кольори, лише для apps/mobile.
+    background: "#0A0A0C",
+    card: "#1A1A1F",
+    border: "#2A2A30",
     tint: primary,
     accent,
     danger,

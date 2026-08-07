@@ -5,6 +5,10 @@ import { ScrollView, StyleSheet } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 
 const ERROR_MESSAGES: Record<string, string> = {
   validation_error: "Посилання неповне.",
@@ -18,6 +22,7 @@ export default function VerifyEmailScreen() {
   // налаштовано на рівні застосунку — окрема майбутня задача (App/Play
   // Store association files). До того — ручне вставлення токена нижче.
   const params = useLocalSearchParams<{ token?: string }>();
+  const colors = Colors[useColorScheme()];
 
   const [token, setToken] = useState(params.token ?? "");
   const [status, setStatus] = useState<Status>("idle");
@@ -71,7 +76,11 @@ export default function VerifyEmailScreen() {
               onChangeText={setToken}
               autoCapitalize="none"
             />
-            {message && <Text style={styles.error}>{message}</Text>}
+            {message && (
+              <Text style={[styles.error, { color: colors.danger }]}>
+                {message}
+              </Text>
+            )}
             <Button
               title={status === "loading" ? "Перевіряємо..." : "Підтвердити"}
               onPress={() => handleVerify(token)}
@@ -96,11 +105,16 @@ export default function VerifyEmailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: "center", padding: 24, gap: 8 },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 15, opacity: 0.7, marginBottom: 24 },
-  form: { gap: 16 },
-  error: { color: "#EF4444", fontSize: 14 },
-  link: { marginTop: 24, alignItems: "center" },
-  linkText: { fontSize: 14, opacity: 0.8, textAlign: "center" },
+  container: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  title: { ...Typography.h2, marginBottom: Spacing.sm },
+  subtitle: { ...Typography.body, opacity: 0.7, marginBottom: Spacing.lg },
+  form: { gap: Spacing.md },
+  error: Typography.small,
+  link: { marginTop: Spacing.lg, alignItems: "center" },
+  linkText: { ...Typography.small, opacity: 0.8, textAlign: "center" },
 });

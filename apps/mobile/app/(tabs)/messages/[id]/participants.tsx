@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { ConversationParticipant, UserSearchResult } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -187,7 +189,7 @@ export default function GroupParticipantsScreen() {
   if (status === "error") {
     return (
       <View style={styles.center}>
-        <Text style={{ color: colors.danger }}>
+        <Text style={[styles.stateText, { color: colors.danger }]}>
           Не вдалося завантажити групу. Спробуйте ще раз.
         </Text>
       </View>
@@ -272,7 +274,7 @@ export default function GroupParticipantsScreen() {
                           { backgroundColor: `${colors.tint}26` },
                         ]}
                       >
-                        <Text style={{ color: colors.tint, fontSize: 13 }}>
+                        <Text style={[styles.chipText, { color: colors.tint }]}>
                           {person.displayName ?? person.username} ×
                         </Text>
                       </Pressable>
@@ -401,51 +403,61 @@ export default function GroupParticipantsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  container: { padding: 16, gap: 4 },
-  title: { fontSize: 13, opacity: 0.6, marginBottom: 8 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm + Spacing.xs,
+  },
+  container: { padding: Spacing.md, gap: Spacing.xs },
+  title: { ...Typography.small, opacity: 0.6, marginBottom: Spacing.sm },
   participantRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
+    gap: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
   participantInfo: { flex: 1 },
-  participantName: { fontSize: 14, fontWeight: "500" },
-  participantRole: { fontSize: 12, marginTop: 1 },
-  rowActions: { flexDirection: "row", gap: 6 },
-  smallButton: { height: 32, paddingHorizontal: 10 },
-  footer: { marginTop: 16, gap: 24 },
-  addBlock: { gap: 8 },
-  addTitle: { fontSize: 14, fontWeight: "500" },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
+  participantName: { ...Typography.small, fontWeight: "500" },
+  participantRole: { ...Typography.small, marginTop: 1 },
+  rowActions: { flexDirection: "row", gap: Spacing.xs + 2 },
+  smallButton: { height: 32, paddingHorizontal: Spacing.sm + 2 },
+  footer: { marginTop: Spacing.md, gap: Spacing.lg },
+  addBlock: { gap: Spacing.sm },
+  addTitle: { ...Typography.small, fontWeight: "500" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  chip: {
+    borderRadius: 16,
+    paddingHorizontal: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.xs + 2,
+  },
+  chipText: Typography.small,
   stateText: {
+    ...Typography.small,
     textAlign: "center",
-    fontSize: 13,
     opacity: 0.6,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    gap: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
     borderRadius: 12,
   },
-  resultName: { fontSize: 14, flex: 1 },
+  resultName: { ...Typography.small, flex: 1 },
   leaveButton: {},
   modalBackdrop: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 24,
+    padding: Spacing.lg,
   },
-  modalCard: { width: "100%", maxWidth: 400, gap: 12 },
-  modalTitle: { fontSize: 18, fontWeight: "600" },
-  modalHint: { fontSize: 13 },
-  successorList: { gap: 2 },
-  modalActions: { gap: 8 },
+  modalCard: { width: "100%", maxWidth: 400, gap: Spacing.sm + Spacing.xs },
+  modalTitle: Typography.h3,
+  modalHint: Typography.small,
+  successorList: { gap: Spacing.xs / 2, backgroundColor: "transparent" },
+  modalActions: { gap: Spacing.sm, backgroundColor: "transparent" },
 });

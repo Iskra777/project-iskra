@@ -7,10 +7,12 @@ import {
 } from "react-native";
 
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 
 interface ButtonProps extends PressableProps {
   title: string;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "ghost";
   loading?: boolean;
 }
 
@@ -23,6 +25,13 @@ export function Button({
   ...props
 }: ButtonProps) {
   const isPrimary = variant === "primary";
+  const isGhost = variant === "ghost";
+  const variantStyle = isPrimary
+    ? styles.primary
+    : isGhost
+      ? styles.ghost
+      : styles.secondary;
+  const textColorStyle = isPrimary ? styles.textPrimary : styles.textSecondary;
 
   return (
     <Pressable
@@ -31,7 +40,7 @@ export function Button({
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,
-        isPrimary ? styles.primary : styles.secondary,
+        variantStyle,
         (disabled || loading) && styles.disabled,
         pressed && styles.pressed,
         typeof style === "function" ? undefined : style,
@@ -41,14 +50,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={isPrimary ? "#fff" : Colors.dark.tint} />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            isPrimary ? styles.textPrimary : styles.textSecondary,
-          ]}
-        >
-          {title}
-        </Text>
+        <Text style={[styles.text, textColorStyle]}>{title}</Text>
       )}
     </Pressable>
   );
@@ -60,17 +62,26 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: Spacing.md,
   },
   primary: { backgroundColor: Colors.dark.tint },
+  // Той самий підхід, що Input.tsx: колір картки (не суцільний темний
+  // блок) + тонка світла обвідка для відчутності на дотик.
   secondary: {
-    backgroundColor: "transparent",
+    backgroundColor: Colors.dark.card,
     borderWidth: 1,
-    borderColor: Colors.dark.border,
+    borderColor: `${Colors.dark.text}26`,
+  },
+  // Другорядні дії всередині вже існуючої картки (напр. "Видалити" на
+  // пості) — без власного фону чи рамки взагалі, як на вебі variant="ghost".
+  ghost: {
+    backgroundColor: "transparent",
+    height: 32,
+    paddingHorizontal: Spacing.sm,
   },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.85 },
-  text: { fontSize: 16, fontWeight: "600" },
+  text: { fontSize: Typography.body.fontSize, fontWeight: "600" },
   textPrimary: { color: "#fff" },
   textSecondary: { color: Colors.dark.text },
 });

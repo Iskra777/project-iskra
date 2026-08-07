@@ -10,6 +10,8 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import { useSession } from "@/lib/session-context";
 
@@ -72,6 +74,8 @@ export default function EditProfileScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
       quality: 0.8,
     });
     if (result.canceled) return;
@@ -175,7 +179,13 @@ export default function EditProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Card style={styles.card}>
+      <View
+        style={[
+          styles.section,
+          styles.sectionDivider,
+          { borderBottomColor: colors.border },
+        ]}
+      >
         <View style={styles.avatarRow}>
           <Avatar
             uri={user.avatarUrl}
@@ -190,7 +200,7 @@ export default function EditProfileScreen() {
           />
         </View>
         {avatarError && (
-          <Text style={{ color: colors.danger, fontSize: 13 }}>
+          <Text style={[styles.errorText, { color: colors.danger }]}>
             {avatarError}
           </Text>
         )}
@@ -218,7 +228,7 @@ export default function EditProfileScreen() {
             maxLength={100}
           />
           {formError && (
-            <Text style={{ color: colors.danger, fontSize: 13 }}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
               {formError}
             </Text>
           )}
@@ -235,9 +245,15 @@ export default function EditProfileScreen() {
             />
           </View>
         </View>
-      </Card>
+      </View>
 
-      <Card style={styles.card}>
+      <View
+        style={[
+          styles.section,
+          styles.sectionDivider,
+          { borderBottomColor: colors.border },
+        ]}
+      >
         <CardTitle>Мої дані</CardTitle>
         <CardDescription style={styles.exportHint}>
           Завантажте копію даних, які Iskra зберігає про вас.
@@ -249,15 +265,13 @@ export default function EditProfileScreen() {
           disabled={isExporting}
         />
         {exportError && (
-          <Text style={{ color: colors.danger, fontSize: 13 }}>
+          <Text style={[styles.errorText, { color: colors.danger }]}>
             {exportError}
           </Text>
         )}
-      </Card>
+      </View>
 
-      <Card
-        style={[styles.card, { borderColor: colors.danger, borderWidth: 1 }]}
-      >
+      <View style={styles.section}>
         <CardTitle style={{ color: colors.danger }}>Небезпечна зона</CardTitle>
         <CardDescription style={styles.exportHint}>
           Видалення акаунта деактивує його одразу і завершує всі активні сесії.
@@ -268,7 +282,7 @@ export default function EditProfileScreen() {
           variant="secondary"
           onPress={() => setIsDeleteOpen(true)}
         />
-      </Card>
+      </View>
 
       <Modal
         visible={isDeleteOpen}
@@ -315,19 +329,26 @@ export default function EditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 16 },
-  card: { gap: 12 },
-  avatarRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  form: { gap: 12 },
-  textarea: { height: 96, textAlignVertical: "top", paddingTop: 10 },
-  actions: { gap: 8 },
-  exportHint: { marginBottom: 4 },
+  container: { padding: Spacing.md, gap: Spacing.lg },
+  section: { gap: Spacing.sm + Spacing.xs },
+  sectionDivider: { paddingBottom: Spacing.lg, borderBottomWidth: 1 },
+  card: { gap: Spacing.sm + Spacing.xs },
+  avatarRow: { flexDirection: "row", alignItems: "center", gap: Spacing.md },
+  form: { gap: Spacing.sm + Spacing.xs },
+  textarea: {
+    height: 96,
+    textAlignVertical: "top",
+    paddingTop: Spacing.sm + 2,
+  },
+  actions: { gap: Spacing.sm, backgroundColor: "transparent" },
+  exportHint: { marginBottom: Spacing.xs },
+  errorText: Typography.small,
   modalBackdrop: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 24,
+    padding: Spacing.lg,
   },
   modalCard: { width: "100%", maxWidth: 400 },
 });

@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { ChatMessage, ConversationDetail } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -305,7 +307,9 @@ export default function ChatScreen() {
             }
             style={styles.participantsButton}
           >
-            <Text style={{ color: colors.tint, fontSize: 13 }}>Учасники</Text>
+            <Text style={[styles.participantsLabel, { color: colors.tint }]}>
+              Учасники
+            </Text>
           </Pressable>
         )}
       </View>
@@ -340,7 +344,12 @@ export default function ChatScreen() {
                     {sender?.displayName ?? sender?.username ?? "?"}
                   </Text>
                 )}
-                <Text style={{ color: isOwn ? "#fff" : colors.text }}>
+                <Text
+                  style={[
+                    styles.bubbleText,
+                    { color: isOwn ? "#fff" : colors.text },
+                  ]}
+                >
                   {message.content}
                 </Text>
                 <Text
@@ -387,39 +396,58 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm + Spacing.xs,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: Spacing.sm + Spacing.xs,
+    paddingHorizontal: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm + 2,
     borderBottomWidth: 1,
   },
-  backButton: { padding: 4 },
+  backButton: { padding: Spacing.xs },
   backArrow: { fontSize: 20 },
   headerText: { flex: 1 },
-  headerName: { fontSize: 15, fontWeight: "600" },
-  headerSub: { fontSize: 12, marginTop: 1 },
-  participantsButton: { padding: 4 },
-  list: { padding: 16, gap: 8, flexGrow: 1 },
+  headerName: { ...Typography.small, fontWeight: "600" },
+  headerSub: { ...Typography.small, marginTop: 1 },
+  participantsButton: { padding: Spacing.xs },
+  participantsLabel: Typography.small,
+  list: { padding: Spacing.md, gap: Spacing.sm, flexGrow: 1 },
   bubbleRow: { flexDirection: "row" },
   bubble: {
     maxWidth: "78%",
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm,
   },
-  senderName: { fontSize: 12, fontWeight: "600", marginBottom: 2 },
-  bubbleTime: { fontSize: 11, marginTop: 4, textAlign: "right" },
-  readReceipt: { fontSize: 12, textAlign: "right", marginTop: 4 },
+  senderName: {
+    ...Typography.small,
+    fontWeight: "600",
+    marginBottom: Spacing.xs / 2,
+  },
+  bubbleText: Typography.body,
+  bubbleTime: {
+    ...Typography.small,
+    marginTop: Spacing.xs,
+    textAlign: "right",
+  },
+  readReceipt: {
+    ...Typography.small,
+    textAlign: "right",
+    marginTop: Spacing.xs,
+  },
   composer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 12,
+    gap: Spacing.sm,
+    padding: Spacing.sm + Spacing.xs,
     borderTopWidth: 1,
   },
   composerInput: { flex: 1, height: 44 },
-  sendButton: { paddingHorizontal: 16 },
+  sendButton: { paddingHorizontal: Spacing.md },
 });

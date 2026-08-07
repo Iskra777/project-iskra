@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { UserSearchResult } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -112,7 +114,7 @@ export default function NewGroupScreen() {
                   onPress={() => toggleSelected(person)}
                   style={[styles.chip, { backgroundColor: `${colors.tint}26` }]}
                 >
-                  <Text style={{ color: colors.tint, fontSize: 13 }}>
+                  <Text style={[styles.chipText, { color: colors.tint }]}>
                     {person.displayName ?? person.username} ×
                   </Text>
                 </Pressable>
@@ -162,7 +164,9 @@ export default function NewGroupScreen() {
       ListFooterComponent={
         <View style={styles.footer}>
           {error && (
-            <Text style={{ color: colors.danger, fontSize: 13 }}>{error}</Text>
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error}
+            </Text>
           )}
           <Button
             title={isCreating ? "Створюємо..." : "Створити групу"}
@@ -176,25 +180,31 @@ export default function NewGroupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16 },
-  headerBlock: { gap: 12 },
-  hint: { fontSize: 13, opacity: 0.6, marginBottom: -4 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
+  container: { padding: Spacing.md },
+  headerBlock: { gap: Spacing.sm + Spacing.xs },
+  hint: { ...Typography.small, opacity: 0.6, marginBottom: -Spacing.xs },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
+  chip: {
+    borderRadius: 16,
+    paddingHorizontal: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.xs + 2,
+  },
+  chipText: Typography.small,
   stateText: {
+    ...Typography.small,
     textAlign: "center",
-    fontSize: 13,
     opacity: 0.6,
-    paddingVertical: 8,
+    paddingVertical: Spacing.sm,
   },
   resultRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    gap: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
     borderRadius: 12,
   },
-  resultName: { fontSize: 14, flex: 1 },
-  footer: { marginTop: 16, gap: 8 },
+  resultName: { ...Typography.small, flex: 1 },
+  errorText: Typography.small,
+  footer: { marginTop: Spacing.md, gap: Spacing.sm },
 });

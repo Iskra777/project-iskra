@@ -10,10 +10,15 @@ import {
 import { Text, View } from "@/components/Themed";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import { useSession } from "@/lib/session-context";
 
 export default function LoginScreen() {
   const { loginWithPassword } = useSession();
+  const colors = Colors[useColorScheme()];
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,7 +69,11 @@ export default function LoginScreen() {
             secureTextEntry
             textContentType="password"
           />
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && (
+            <Text style={[styles.error, { color: colors.danger }]}>
+              {error}
+            </Text>
+          )}
           <Button
             title={isSubmitting ? "Входимо..." : "Увійти"}
             onPress={handleSubmit}
@@ -89,13 +98,13 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: 24,
-    gap: 8,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
   },
-  title: { fontSize: 32, fontWeight: "700", marginBottom: 4 },
-  subtitle: { fontSize: 15, opacity: 0.7, marginBottom: 24 },
-  form: { gap: 16 },
-  error: { color: "#EF4444", fontSize: 14 },
-  link: { marginTop: 16, alignItems: "center" },
-  linkText: { fontSize: 14, opacity: 0.8, textAlign: "center" },
+  title: { ...Typography.h1, marginBottom: Spacing.xs },
+  subtitle: { ...Typography.body, opacity: 0.7, marginBottom: Spacing.lg },
+  form: { gap: Spacing.md },
+  error: Typography.small,
+  link: { marginTop: Spacing.md, alignItems: "center" },
+  linkText: { ...Typography.small, opacity: 0.8, textAlign: "center" },
 });

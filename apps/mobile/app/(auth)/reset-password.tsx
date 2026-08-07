@@ -5,11 +5,16 @@ import { ScrollView, StyleSheet } from "react-native";
 import { Text, View } from "@/components/Themed";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ token?: string }>();
   const router = useRouter();
+  const colors = Colors[useColorScheme()];
 
   const [token, setToken] = useState(params.token ?? "");
   const [password, setPassword] = useState("");
@@ -52,7 +57,9 @@ export default function ResetPasswordScreen() {
           secureTextEntry
           textContentType="newPassword"
         />
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && (
+          <Text style={[styles.error, { color: colors.danger }]}>{error}</Text>
+        )}
         <Button
           title={isSubmitting ? "Зберігаємо..." : "Зберегти новий пароль"}
           onPress={handleSubmit}
@@ -69,11 +76,16 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, justifyContent: "center", padding: 24, gap: 8 },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 15, opacity: 0.7, marginBottom: 24 },
-  form: { gap: 16 },
-  error: { color: "#EF4444", fontSize: 14 },
-  link: { marginTop: 16, alignItems: "center" },
-  linkText: { fontSize: 14, opacity: 0.8, textAlign: "center" },
+  container: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  title: { ...Typography.h2, marginBottom: Spacing.sm },
+  subtitle: { ...Typography.body, opacity: 0.7, marginBottom: Spacing.lg },
+  form: { gap: Spacing.md },
+  error: Typography.small,
+  link: { marginTop: Spacing.md, alignItems: "center" },
+  linkText: { ...Typography.small, opacity: 0.8, textAlign: "center" },
 });

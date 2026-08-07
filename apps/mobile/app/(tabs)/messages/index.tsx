@@ -7,6 +7,8 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import Spacing from "@/constants/Spacing";
+import Typography from "@/constants/Typography";
 import * as api from "@/lib/api";
 import type { ConversationListItem } from "@/lib/api";
 import { useSession } from "@/lib/session-context";
@@ -139,21 +141,38 @@ export default function MessagesListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, gap: 4 },
-  toolbar: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  container: { padding: Spacing.md, gap: Spacing.xs },
+  toolbar: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm + Spacing.xs,
+  },
   toolbarButton: { flex: 1 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
+    gap: Spacing.sm + Spacing.xs,
+    paddingVertical: Spacing.sm + 2,
   },
-  rowText: { flex: 1, gap: 2 },
-  rowTop: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-  name: { fontSize: 14, fontWeight: "500", flexShrink: 1 },
-  time: { fontSize: 12 },
-  rowBottom: { flexDirection: "row", alignItems: "center", gap: 6 },
-  preview: { fontSize: 13, flex: 1 },
+  rowText: { flex: 1, gap: Spacing.xs / 2 },
+  rowTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: Spacing.sm,
+  },
+  name: { ...Typography.small, fontWeight: "500", flexShrink: 1 },
+  time: Typography.small,
+  rowBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs + 2,
+  },
+  preview: { ...Typography.small, flex: 1 },
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
-  stateText: { marginTop: 24, textAlign: "center", fontSize: 13, opacity: 0.6 },
+  stateText: {
+    ...Typography.small,
+    marginTop: Spacing.lg,
+    textAlign: "center",
+    opacity: 0.6,
+  },
 });
