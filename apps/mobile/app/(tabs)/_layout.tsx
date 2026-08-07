@@ -1,6 +1,5 @@
 import { SymbolView } from "expo-symbols";
-import { Link, Tabs } from "expo-router";
-import { Platform, Pressable } from "react-native";
+import { Tabs } from "expo-router";
 
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -21,44 +20,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Tab One",
+          title: "Стрічка",
           tabBarIcon: ({ color }) => (
             <SymbolView
-              name={{
-                ios: "chevron.left.forwardslash.chevron.right",
-                android: "code",
-                web: "code",
-              }}
+              name={{ ios: "flame.fill", android: "whatshot", web: "whatshot" }}
               tintColor={color}
               size={28}
             />
           ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: "info.circle", android: "info", web: "info" }}
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="profile"
         options={{
-          title: "Tab Two",
+          title: "Профіль",
+          headerShown: false,
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{
-                ios: "chevron.left.forwardslash.chevron.right",
-                android: "code",
-                web: "code",
+                ios: "person.crop.circle",
+                android: "person",
+                web: "person",
               }}
               tintColor={color}
               size={28}

@@ -5,7 +5,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 
 interface InputProps extends TextInputProps {
-  label: string;
+  label?: string;
   error?: string;
 }
 
@@ -15,9 +15,9 @@ export function Input({ label, error, style, ...props }: InputProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      {label && <Text style={styles.label}>{label}</Text>}
       <TextInput
-        accessibilityLabel={label}
+        accessibilityLabel={label ?? props.placeholder}
         placeholderTextColor={colors.tabIconDefault}
         style={[
           styles.input,
