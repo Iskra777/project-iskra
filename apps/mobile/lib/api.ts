@@ -450,3 +450,48 @@ export function leaveConversation(
     },
   );
 }
+
+export interface Friend {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+export interface FriendRequest {
+  id: string;
+  createdAt: string;
+  requester: Friend;
+}
+
+export function getFriends(accessToken: string) {
+  return request<{ friends: Friend[] }>("/api/users/me/friends", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function getFriendRequests(accessToken: string) {
+  return request<{ requests: FriendRequest[] }>(
+    "/api/users/me/friend-requests",
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function sendFriendRequest(accessToken: string, username: string) {
+  return request<{ success: true }>(`/api/users/${username}/friend-request`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function respondFriendRequest(
+  accessToken: string,
+  username: string,
+  action: "accept" | "reject",
+) {
+  return request<{ success: true }>(`/api/users/${username}/friend-request`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ action }),
+  });
+}
