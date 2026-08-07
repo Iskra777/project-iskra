@@ -105,6 +105,11 @@ export default function ProfileScreen() {
           variant="secondary"
           onPress={() => router.push("/(tabs)/profile/bookmarks")}
         />
+        <Button
+          title="🎯 Цілі"
+          variant="secondary"
+          onPress={() => router.push("/(tabs)/profile/goals")}
+        />
       </Card>
 
       <Card style={styles.card}>

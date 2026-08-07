@@ -618,3 +618,93 @@ export function removeCommunityMember(
     { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
   );
 }
+
+export interface Goal {
+  id: string;
+  title: string;
+  description: string | null;
+  deadline: string | null;
+  status: "active" | "completed" | "abandoned";
+  isPrivate: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProgressEntry {
+  id: string;
+  goalId: string;
+  value: number | null;
+  note: string | null;
+  recordedAt: string;
+}
+
+export function getGoals(accessToken: string) {
+  return request<{ goals: Goal[] }>("/api/goals", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function getGoal(accessToken: string, goalId: string) {
+  return request<{ goal: Goal }>(`/api/goals/${goalId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function createGoal(
+  accessToken: string,
+  input: { title: string; description: string | null; deadline: string | null },
+) {
+  return request<{ goal: Goal }>("/api/goals", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateGoal(
+  accessToken: string,
+  goalId: string,
+  input: {
+    title?: string;
+    description?: string | null;
+    deadline?: string | null;
+    status?: Goal["status"];
+  },
+) {
+  return request<{ goal: Goal }>(`/api/goals/${goalId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteGoal(accessToken: string, goalId: string) {
+  return request<{ success: true }>(`/api/goals/${goalId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function getProgress(
+  accessToken: string,
+  goalId: string,
+  before?: string,
+) {
+  const query = before ? `?before=${before}` : "";
+  return request<{ progress: ProgressEntry[]; nextCursor: string | null }>(
+    `/api/goals/${goalId}/progress${query}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function addProgress(
+  accessToken: string,
+  goalId: string,
+  input: { value: number | null; note: string | null },
+) {
+  return request<{ progress: ProgressEntry }>(`/api/goals/${goalId}/progress`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
