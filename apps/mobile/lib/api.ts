@@ -708,3 +708,55 @@ export function addProgress(
     body: JSON.stringify(input),
   });
 }
+
+export interface DiaryEntry {
+  id: string;
+  title: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function getDiaryEntries(accessToken: string, before?: string) {
+  const query = before ? `?before=${before}` : "";
+  return request<{ entries: DiaryEntry[]; nextCursor: string | null }>(
+    `/api/diary${query}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+}
+
+export function getDiaryEntry(accessToken: string, entryId: string) {
+  return request<{ entry: DiaryEntry }>(`/api/diary/${entryId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export function createDiaryEntry(
+  accessToken: string,
+  input: { title: string | null; content: string },
+) {
+  return request<{ entry: DiaryEntry }>("/api/diary", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDiaryEntry(
+  accessToken: string,
+  entryId: string,
+  input: { title?: string | null; content?: string },
+) {
+  return request<{ entry: DiaryEntry }>(`/api/diary/${entryId}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteDiaryEntry(accessToken: string, entryId: string) {
+  return request<{ success: true }>(`/api/diary/${entryId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}

@@ -110,6 +110,11 @@ export default function ProfileScreen() {
           variant="secondary"
           onPress={() => router.push("/(tabs)/profile/goals")}
         />
+        <Button
+          title="📔 Щоденник"
+          variant="secondary"
+          onPress={() => router.push("/(tabs)/profile/diary")}
+        />
       </Card>
 
       <Card style={styles.card}>

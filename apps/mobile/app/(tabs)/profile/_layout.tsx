@@ -9,6 +9,9 @@ export default function ProfileLayout() {
       <Stack.Screen name="goals/index" options={{ title: "Цілі" }} />
       <Stack.Screen name="goals/new" options={{ title: "Нова ціль" }} />
       <Stack.Screen name="goals/[id]" options={{ title: "" }} />
+      <Stack.Screen name="diary/index" options={{ title: "Щоденник" }} />
+      <Stack.Screen name="diary/new" options={{ title: "Новий запис" }} />
+      <Stack.Screen name="diary/[id]" options={{ title: "Редагувати запис" }} />
     </Stack>
   );
 }
